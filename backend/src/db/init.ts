@@ -3,13 +3,14 @@ import path from 'path';
 import { pool } from './pool';
 
 /** Verilənlər bazası hazır olana qədər gözləyir (hostinqdə DB gec qalxa bilər). */
-async function waitForDb(retries = 15) {
+async function waitForDb(retries = 10) {
   for (let i = 1; i <= retries; i++) {
     try {
       await pool.query('SELECT 1');
       return;
-    } catch (e) {
-      console.log(`⏳ DB hazır deyil, yenidən cəhd (${i}/${retries})…`);
+    } catch (e: any) {
+      // Əsl xətanı göstər ki, problemi (parol/host/SSL) görək
+      console.log(`⏳ DB hazır deyil (${i}/${retries}) — xəta: ${e?.message || e}`);
       await new Promise((r) => setTimeout(r, 2000));
     }
   }
