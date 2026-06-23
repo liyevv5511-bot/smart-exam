@@ -1,9 +1,26 @@
 import { Router } from 'express';
 import { query } from '../db/pool';
-import { authRequired, adminOnly, AuthedRequest } from '../middleware/auth';
+import { authRequired, adminOnly, AuthedRequest, invalidateUser } from '../middleware/auth';
 
 const router = Router();
 router.use(authRequired, adminOnly);
+
+// ---------- CANLI fəaliyyət: kim hansı imtahanı yazır + irəliləyiş ----------
+router.get('/activity', async (_req, res) => {
+  const { rows } = await query(`
+    SELECT s.id AS session_id, s.mode, s.total, s.practice, s.started_at,
+           u.id AS user_id, u.full_name, u.email,
+           t.title AS test_title,
+           (SELECT COUNT(*) FROM exam_answers ea
+              WHERE ea.session_id = s.id AND ea.selected_index IS NOT NULL) AS answered
+    FROM exam_sessions s
+    JOIN users u ON u.id = s.user_id
+    JOIN tests t ON t.id = s.test_id
+    WHERE s.status = 'in_progress'
+    ORDER BY s.started_at DESC
+  `);
+  res.json({ active: rows, serverTime: new Date().toISOString() });
+});
 
 // ---------- Bütün tələbələr + statistika + CANLI status ----------
 router.get('/users', async (_req, res) => {
@@ -46,11 +63,27 @@ router.get('/users/:id/tests', async (req, res) => {
   res.json({ user: u.rows[0], tests: tests.rows });
 });
 
-// ---------- İstifadəçini aktiv/deaktiv et ----------
-router.patch('/users/:id/active', async (req, res) => {
+// ---------- İstifadəçini aktiv/deaktiv et (DƏRHAL təsir edir) ----------
+router.patch('/users/:id/active', async (req: AuthedRequest, res) => {
+  if (req.params.id === req.user!.sub)
+    return res.status(400).json({ error: 'Öz hesabınızı deaktiv edə bilməzsiniz.' });
   const { rows } = await query(
     'UPDATE users SET is_active=$1 WHERE id=$2 RETURNING id, is_active',
     [!!req.body.isActive, req.params.id]
+  );
+  if (!rows[0]) return res.status(404).json({ error: 'İstifadəçi tapılmadı.' });
+  invalidateUser(req.params.id); // keşi təmizlə → blok dərhal qüvvəyə minir
+  res.json({ user: rows[0] });
+});
+
+// ---------- İstifadəçinin rolunu dəyiş (admin et / tələbə et) ----------
+router.patch('/users/:id/role', async (req: AuthedRequest, res) => {
+  const role = req.body.role === 'admin' ? 'admin' : 'student';
+  if (req.params.id === req.user!.sub)
+    return res.status(400).json({ error: 'Öz rolunuzu dəyişə bilməzsiniz.' });
+  const { rows } = await query(
+    'UPDATE users SET role=$1 WHERE id=$2 RETURNING id, role',
+    [role, req.params.id]
   );
   if (!rows[0]) return res.status(404).json({ error: 'İstifadəçi tapılmadı.' });
   res.json({ user: rows[0] });
@@ -62,6 +95,7 @@ router.delete('/users/:id', async (req: AuthedRequest, res) => {
     return res.status(400).json({ error: 'Öz hesabınızı silə bilməzsiniz.' });
   const r = await query('DELETE FROM users WHERE id=$1', [req.params.id]);
   if (!r.rowCount) return res.status(404).json({ error: 'İstifadəçi tapılmadı.' });
+  invalidateUser(req.params.id);
   res.json({ message: 'İstifadəçi silindi.' });
 });
 

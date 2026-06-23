@@ -14,39 +14,55 @@ import {
   Calendar,
   FileSpreadsheet,
   Edit3,
+  Shield,
 } from 'lucide-react';
 import { api, apiError } from '../api/client';
 import { StatCard } from '../components/StatCard';
 
 export default function Admin() {
-  const [tab, setTab] = useState<'users' | 'tests'>('users');
+  const [tab, setTab] = useState<'activity' | 'users' | 'tests'>('activity');
   const [users, setUsers] = useState<any[]>([]);
   const [tests, setTests] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
+  const [activity, setActivity] = useState<any[]>([]);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [userTests, setUserTests] = useState<Record<string, any[]>>({});
   const [live, setLive] = useState<{ onlineCount: number; inExamCount: number; total: number } | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
-  const loadUsers = () =>
+  const loadLive = () => {
     api.get('/admin/users').then((r) => {
       setUsers(r.data.users);
       setLive(r.data.live);
       setLastUpdate(new Date());
     });
+    api.get('/admin/activity').then((r) => setActivity(r.data.active));
+  };
 
   const load = () => {
-    loadUsers();
+    loadLive();
     api.get('/admin/tests').then((r) => setTests(r.data.tests));
     api.get('/admin/stats').then((r) => setStats(r.data));
   };
 
   useEffect(() => {
     load();
-    // CANLI: hər 8 saniyədə istifadəçi siyahısını avtomatik yenilə
-    const t = setInterval(loadUsers, 8000);
+    // CANLI: hər 6 saniyədə istifadəçi siyahısı + fəaliyyəti avtomatik yenilə
+    const t = setInterval(loadLive, 6000);
     return () => clearInterval(t);
   }, []);
+
+  const changeRole = async (u: any) => {
+    const newRole = u.role === 'admin' ? 'student' : 'admin';
+    if (!confirm(`${u.full_name} → "${newRole}" roluna keçirilsin?`)) return;
+    try {
+      await api.patch(`/admin/users/${u.id}/role`, { role: newRole });
+      setUsers((us) => us.map((x) => (x.id === u.id ? { ...x, role: newRole } : x)));
+      toast.success('Rol dəyişdirildi.');
+    } catch (e) {
+      toast.error(apiError(e));
+    }
+  };
 
   const toggleActive = async (u: any) => {
     try {
@@ -137,6 +153,19 @@ export default function Admin() {
 
       <div className="flex gap-2 rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
         <button
+          onClick={() => setTab('activity')}
+          className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-sm font-medium ${
+            tab === 'activity' ? 'bg-white text-brand-600 shadow-sm dark:bg-slate-900' : 'text-slate-500'
+          }`}
+        >
+          <Edit3 size={16} /> Canlı Fəaliyyət
+          {activity.length > 0 && (
+            <span className="rounded-full bg-brand-600 px-1.5 text-xs font-bold text-white">
+              {activity.length}
+            </span>
+          )}
+        </button>
+        <button
           onClick={() => setTab('users')}
           className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-sm font-medium ${
             tab === 'users' ? 'bg-white text-brand-600 shadow-sm dark:bg-slate-900' : 'text-slate-500'
@@ -154,7 +183,57 @@ export default function Admin() {
         </button>
       </div>
 
-      {tab === 'users' ? (
+      {/* CANLI FƏALİYYƏT — kim hansı imtahanı yazır, irəliləyişlə */}
+      {tab === 'activity' && (
+        <div className="space-y-3">
+          {activity.length === 0 ? (
+            <div className="card py-16 text-center text-slate-400">
+              <Edit3 size={40} className="mx-auto mb-3 opacity-40" />
+              Hazırda heç kim imtahan yazmır.
+              <p className="mt-1 text-xs">Bu siyahı avtomatik yenilənir.</p>
+            </div>
+          ) : (
+            activity.map((a) => {
+              const pct = a.total ? Math.round((Number(a.answered) / a.total) * 100) : 0;
+              const mins = Math.floor((Date.now() - new Date(a.started_at).getTime()) / 60000);
+              return (
+                <div key={a.session_id} className="card">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="grid h-10 w-10 place-items-center rounded-full bg-brand-100 text-sm font-bold text-brand-700 dark:bg-brand-950/60 dark:text-brand-300">
+                        {a.full_name?.[0]?.toUpperCase()}
+                      </div>
+                      <div>
+                        <p className="font-semibold">{a.full_name}</p>
+                        <p className="text-xs text-slate-400">{a.email}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-medium">{a.test_title}</p>
+                      <p className="text-xs text-slate-400">
+                        {a.practice ? 'Məşq' : a.mode} · {mins} dəq əvvəl başladı
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3">
+                    <div className="mb-1 flex justify-between text-xs text-slate-400">
+                      <span>İrəliləyiş</span>
+                      <span>
+                        {a.answered}/{a.total} cavablandı ({pct}%)
+                      </span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+                      <div className="h-full rounded-full bg-brand-600 transition-all" style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+
+      {tab === 'users' && (
         <div className="card overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
@@ -224,7 +303,10 @@ export default function Admin() {
                     </td>
                     <td className="py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex gap-1">
-                        <button onClick={() => toggleActive(u)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800" title={u.is_active ? 'Blokla' : 'Aktiv et'}>
+                        <button onClick={() => changeRole(u)} className="rounded-lg p-1.5 text-slate-400 hover:bg-amber-50 hover:text-amber-600 dark:hover:bg-amber-950/40" title={u.role === 'admin' ? 'Tələbə et' : 'Admin et'}>
+                          <Shield size={16} />
+                        </button>
+                        <button onClick={() => toggleActive(u)} className={`rounded-lg p-1.5 ${u.is_active ? 'text-slate-400 hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-950/40' : 'text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-950/40'}`} title={u.is_active ? 'Girişi deaktiv et (blokla)' : 'Aktiv et'}>
                           {u.is_active ? <Ban size={16} /> : <CheckCircle2 size={16} />}
                         </button>
                         <button onClick={() => delUser(u.id)} className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-950/40" title="Sil">
@@ -301,7 +383,9 @@ export default function Admin() {
             </tbody>
           </table>
         </div>
-      ) : (
+      )}
+
+      {tab === 'tests' && (
         <div className="card overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
