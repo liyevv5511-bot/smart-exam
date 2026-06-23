@@ -25,10 +25,11 @@ export default function Upload() {
 
   const pick = (f?: File | null) => {
     if (!f) return;
-    if (!/\.(xlsx|xls)$/i.test(f.name)) return toast.error('Yalnız .xlsx / .xls qəbul edilir.');
+    if (!/\.(xlsx|xls|pdf)$/i.test(f.name))
+      return toast.error('Yalnız .xlsx / .xls / .pdf qəbul edilir.');
     setFile(f);
     setPreview(null);
-    if (!title) setTitle(f.name.replace(/\.(xlsx|xls)$/i, ''));
+    if (!title) setTitle(f.name.replace(/\.(xlsx|xls|pdf)$/i, ''));
   };
 
   // 1) Önizləmə — bazaya yazmadan təhlil
@@ -67,12 +68,18 @@ export default function Upload() {
   };
 
   const stratLabel = (s: string) =>
-    s === 'tabular' ? 'Cədvəl formatı' : s === 'embedded' ? 'Tək-xana (universitet)' : 'Blok formatı';
+    s === 'tabular'
+      ? 'Cədvəl formatı'
+      : s === 'embedded'
+      ? 'Tək-xana (universitet)'
+      : s === 'pdf'
+      ? 'PDF (universitet formatı)'
+      : 'Blok formatı';
 
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-extrabold">Excel Yüklə</h1>
+        <h1 className="text-2xl font-extrabold">Fayl Yüklə (Excel və ya PDF)</h1>
         <p className="text-sm text-slate-500">
           Faylı yoxlayın, sonra təsdiqləyib testə çevirin.
         </p>
@@ -101,7 +108,7 @@ export default function Upload() {
             <input
               ref={inputRef}
               type="file"
-              accept=".xlsx,.xls"
+              accept=".xlsx,.xls,.pdf"
               hidden
               onChange={(e) => pick(e.target.files?.[0])}
             />
@@ -242,6 +249,12 @@ export default function Upload() {
             <div>
               <p className="font-semibold text-slate-700 dark:text-slate-200">3. Blok</p>
               <p className="text-xs">Nömrələnmiş suallar, A) B) C) sətirləri, "Düzgün Cavab: D".</p>
+            </div>
+            <div>
+              <p className="font-semibold text-slate-700 dark:text-slate-200">4. PDF (universitet)</p>
+              <p className="text-xs">
+                Nömrələnmiş suallar, • variantlar, düzgün cavabda <b>√</b> işarəsi.
+              </p>
             </div>
           </div>
           <div className="mt-4 rounded-lg bg-brand-50 p-3 text-xs text-brand-800 dark:bg-brand-950/40 dark:text-brand-200">

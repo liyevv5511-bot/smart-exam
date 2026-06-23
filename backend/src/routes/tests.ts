@@ -2,10 +2,17 @@ import { Router } from 'express';
 import { pool, query } from '../db/pool';
 import { authRequired, AuthedRequest } from '../middleware/auth';
 import { uploadExcel } from '../middleware/upload';
-import { parseExcel } from '../utils/excel';
+import { parseExcel, ParseResult } from '../utils/excel';
+import { parsePdf } from '../utils/pdf';
 
 const router = Router();
 router.use(authRequired);
+
+/** Fayl növünə görə uyğun təhlilçini seçir (PDF → pdf, əks halda Excel). */
+async function parseFile(file: Express.Multer.File): Promise<ParseResult> {
+  const isPdf = /\.pdf$/i.test(file.originalname) || file.mimetype === 'application/pdf';
+  return isPdf ? parsePdf(file.buffer) : parseExcel(file.buffer);
+}
 
 // ---------- Excel yükləmə → yeni test (sual bankı) ----------
 router.post('/upload', (req: AuthedRequest, res) => {
@@ -13,7 +20,7 @@ router.post('/upload', (req: AuthedRequest, res) => {
     if (err) return res.status(400).json({ error: err.message });
     if (!req.file) return res.status(400).json({ error: 'Fayl seçilməyib.' });
 
-    const { questions, errors, warnings, strategy } = parseExcel(req.file.buffer);
+    const { questions, errors, warnings, strategy } = await parseFile(req.file);
     if (!questions.length) {
       return res.status(422).json({ error: 'Fayl təhlil edilə bilmədi.', details: errors });
     }
@@ -85,7 +92,7 @@ router.post('/preview', (req: AuthedRequest, res) => {
     if (err) return res.status(400).json({ error: err.message });
     if (!req.file) return res.status(400).json({ error: 'Fayl seçilməyib.' });
 
-    const { questions, errors, warnings, strategy } = parseExcel(req.file.buffer);
+    const { questions, errors, warnings, strategy } = await parseFile(req.file);
     if (!questions.length) {
       return res.status(422).json({ error: 'Sual aşkarlanmadı.', details: errors });
     }

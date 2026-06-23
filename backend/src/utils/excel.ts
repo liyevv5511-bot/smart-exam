@@ -15,7 +15,7 @@ export interface ParseResult {
   questions: ParsedQuestion[];
   errors: string[];
   warnings: string[];
-  strategy: 'tabular' | 'blocks' | 'embedded' | 'none';
+  strategy: 'tabular' | 'blocks' | 'embedded' | 'pdf' | 'none';
 }
 
 // ============================================================
