@@ -65,6 +65,11 @@ export function parseQuestionsFromText(text: string): {
   const questions: ParsedQuestion[] = [];
   let cur: WorkQ | null = null;
   let pos = 0;
+  // Bəzi PDF-lərdə √ tək sətirdə olur, düzgün cavab növbəti sətirdədir
+  let pendingCorrect = false;
+
+  const isLoneCorrectMark = (t: string) =>
+    t.length > 0 && t.length <= 2 && [...t].every((c) => CORRECT_MARKERS.has(c));
 
   const flush = () => {
     if (!cur) return;
@@ -85,28 +90,39 @@ export function parseQuestionsFromText(text: string): {
   };
 
   for (const line of lines) {
+    const t = line.trim();
+
+    // --- Tək sətirdə √ işarəsi → növbəti variant düzgündür ---
+    if (cur && isLoneCorrectMark(t)) {
+      pendingCorrect = true;
+      continue;
+    }
+
     // --- Yeni sual nömrəsi ---
     const qn = RE_QNUM.exec(line);
-    // Nömrə yalnız o halda sual başlanğıcıdır ki, qısa rəqəmdir (tarix/məbləğ deyil)
     if (qn && (!cur || cur.options.length > 0)) {
       flush();
       cur = { textLines: qn[2] ? [qn[2].trim()] : [], options: [], correctIdx: null };
+      pendingCorrect = false;
       continue;
     }
-    if (!cur) continue; // ilk sualdan əvvəlki metadata (universitet adı, fənn və s.) — keç
+    if (!cur) continue; // ilk sualdan əvvəlki metadata — keç
 
     // --- İşarəli variant (• / √) ---
     const bullet = parseBullet(line);
     if (bullet) {
-      if (bullet.correct) cur.correctIdx = cur.options.length;
+      if (bullet.correct || pendingCorrect) cur.correctIdx = cur.options.length;
       cur.options.push(bullet.text);
+      pendingCorrect = false;
       continue;
     }
 
     // --- "A) ..." variantı ---
     const lo = RE_LETTER_OPT.exec(line);
     if (lo) {
+      if (pendingCorrect) cur.correctIdx = cur.options.length;
       cur.options.push(lo[2].trim());
+      pendingCorrect = false;
       continue;
     }
 
@@ -117,11 +133,16 @@ export function parseQuestionsFromText(text: string): {
       continue;
     }
 
-    // --- Adi mətn: sualın və ya variantın davamı ---
-    if (cur.options.length === 0) {
-      cur.textLines.push(line);
+    // --- Adi mətn ---
+    if (pendingCorrect) {
+      // əvvəlki sətir tək √ idi → bu sətir düzgün variantdır (işarəsiz)
+      cur.correctIdx = cur.options.length;
+      cur.options.push(t);
+      pendingCorrect = false;
+    } else if (cur.options.length === 0) {
+      cur.textLines.push(line); // sualın davamı
     } else {
-      cur.options[cur.options.length - 1] += ' ' + line;
+      cur.options[cur.options.length - 1] += ' ' + line; // variantın davamı (sətirə sığmayıb)
     }
   }
   flush();
