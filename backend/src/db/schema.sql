@@ -18,6 +18,9 @@ CREATE TABLE IF NOT EXISTS users (
 );
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 
+-- Mövcud bazada (məlumat itmədən) son aktivlik sahəsini əlavə et
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_seen TIMESTAMPTZ;
+
 -- ---------- Şifrə bərpa tokenləri ----------
 CREATE TABLE IF NOT EXISTS password_resets (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),

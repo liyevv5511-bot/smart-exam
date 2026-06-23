@@ -13,6 +13,7 @@ import {
   Mail,
   Calendar,
   FileSpreadsheet,
+  Edit3,
 } from 'lucide-react';
 import { api, apiError } from '../api/client';
 import { StatCard } from '../components/StatCard';
@@ -24,13 +25,28 @@ export default function Admin() {
   const [stats, setStats] = useState<any>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [userTests, setUserTests] = useState<Record<string, any[]>>({});
+  const [live, setLive] = useState<{ onlineCount: number; inExamCount: number; total: number } | null>(null);
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+
+  const loadUsers = () =>
+    api.get('/admin/users').then((r) => {
+      setUsers(r.data.users);
+      setLive(r.data.live);
+      setLastUpdate(new Date());
+    });
 
   const load = () => {
-    api.get('/admin/users').then((r) => setUsers(r.data.users));
+    loadUsers();
     api.get('/admin/tests').then((r) => setTests(r.data.tests));
     api.get('/admin/stats').then((r) => setStats(r.data));
   };
-  useEffect(load, []);
+
+  useEffect(() => {
+    load();
+    // CANLI: hər 8 saniyədə istifadəçi siyahısını avtomatik yenilə
+    const t = setInterval(loadUsers, 8000);
+    return () => clearInterval(t);
+  }, []);
 
   const toggleActive = async (u: any) => {
     try {
@@ -92,6 +108,33 @@ export default function Admin() {
         <StatCard icon={Trophy} label="Orta bal" value={t?.avg_score ?? '—'} suffix="%" accent="bg-violet-100 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300" />
       </div>
 
+      {/* CANLI status zolağı */}
+      <div className="flex flex-wrap items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900">
+        <span className="flex items-center gap-2 text-sm font-semibold">
+          <span className="relative flex h-2.5 w-2.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+          </span>
+          Canlı
+        </span>
+        <span className="flex items-center gap-1.5 text-sm">
+          <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
+          <b>{live?.onlineCount ?? 0}</b> nəfər onlayn
+        </span>
+        <span className="flex items-center gap-1.5 text-sm">
+          <Edit3 size={14} className="text-brand-500" />
+          <b>{live?.inExamCount ?? 0}</b> nəfər imtahan yazır
+        </span>
+        <span className="flex items-center gap-1.5 text-sm text-slate-400">
+          <Users size={14} /> {live?.total ?? 0} tələbə
+        </span>
+        {lastUpdate && (
+          <span className="ml-auto text-xs text-slate-400">
+            Yeniləndi: {lastUpdate.toLocaleTimeString('az')}
+          </span>
+        )}
+      </div>
+
       <div className="flex gap-2 rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
         <button
           onClick={() => setTab('users')}
@@ -139,6 +182,12 @@ export default function Admin() {
                           size={14}
                           className={`text-slate-400 transition ${expanded === u.id ? 'rotate-180' : ''}`}
                         />
+                        <span
+                          className={`h-2.5 w-2.5 shrink-0 rounded-full ${
+                            u.online ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'
+                          }`}
+                          title={u.online ? 'Onlayn' : 'Oflayn'}
+                        />
                         {u.full_name}
                       </div>
                     </td>
@@ -158,11 +207,20 @@ export default function Admin() {
                     </td>
                     <td className="py-3">{u.exams_taken}</td>
                     <td className="py-3">
-                      {u.is_active ? (
-                        <span className="text-emerald-600">Aktiv</span>
-                      ) : (
-                        <span className="text-rose-500">Bloklanıb</span>
-                      )}
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        {u.in_exam && (
+                          <span className="inline-flex items-center gap-1 rounded-md bg-brand-100 px-2 py-0.5 text-xs font-semibold text-brand-700 dark:bg-brand-950/50 dark:text-brand-300">
+                            <Edit3 size={11} /> İmtahanda
+                          </span>
+                        )}
+                        {!u.is_active ? (
+                          <span className="text-xs font-medium text-rose-500">Bloklanıb</span>
+                        ) : u.online ? (
+                          <span className="text-xs font-medium text-emerald-600">Onlayn</span>
+                        ) : (
+                          <span className="text-xs text-slate-400">Oflayn</span>
+                        )}
+                      </div>
                     </td>
                     <td className="py-3" onClick={(e) => e.stopPropagation()}>
                       <div className="flex gap-1">

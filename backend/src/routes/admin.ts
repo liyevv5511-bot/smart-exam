@@ -5,17 +5,31 @@ import { authRequired, adminOnly, AuthedRequest } from '../middleware/auth';
 const router = Router();
 router.use(authRequired, adminOnly);
 
-// ---------- Bütün tələbələr + statistika ----------
+// ---------- Bütün tələbələr + statistika + CANLI status ----------
 router.get('/users', async (_req, res) => {
   const { rows } = await query(
-    `SELECT u.id, u.full_name, u.email, u.role, u.is_active, u.created_at,
+    `SELECT u.id, u.full_name, u.email, u.role, u.is_active, u.created_at, u.last_seen,
             COALESCE(st.tests_uploaded,0) AS tests_uploaded,
             COALESCE(st.exams_taken,0)    AS exams_taken,
-            COALESCE(st.avg_score,0)      AS avg_score
+            COALESCE(st.avg_score,0)      AS avg_score,
+            -- son 3 dəqiqədə aktiv olubsa → onlayn
+            (u.last_seen IS NOT NULL AND u.last_seen > now() - interval '3 minutes') AS online,
+            -- hazırda davam edən imtahanı varsa → imtahanda
+            EXISTS (
+              SELECT 1 FROM exam_sessions s
+              WHERE s.user_id = u.id AND s.status = 'in_progress'
+            ) AS in_exam
      FROM users u LEFT JOIN user_stats st ON st.user_id=u.id
      ORDER BY u.created_at DESC`
   );
-  res.json({ users: rows });
+  // Canlı xülasə
+  const onlineCount = rows.filter((r) => r.online).length;
+  const inExamCount = rows.filter((r) => r.in_exam).length;
+  res.json({
+    users: rows,
+    live: { onlineCount, inExamCount, total: rows.filter((r) => r.role === 'student').length },
+    serverTime: new Date().toISOString(),
+  });
 });
 
 // ---------- Bir istifadəçinin yüklədiyi testlər ----------
