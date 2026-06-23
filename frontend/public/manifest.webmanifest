@@ -1,0 +1,14 @@
+{
+  "name": "Ağıllı İmtahan Sistemi",
+  "short_name": "İmtahan",
+  "description": "Tələbələr üçün ağıllı onlayn imtahan platforması",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0f172a",
+  "theme_color": "#3366ff",
+  "icons": [
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
