@@ -49,6 +49,65 @@ router.get('/users', async (_req, res) => {
   });
 });
 
+// ---------- Bir tələbənin TAM detalları (statistika + bütün imtahanlar + son nəticə) ----------
+router.get('/users/:id/detail', async (req, res) => {
+  const id = req.params.id;
+  const u = await query(
+    `SELECT id, full_name, email, role, is_active, created_at, last_seen FROM users WHERE id=$1`,
+    [id]
+  );
+  if (!u.rowCount) return res.status(404).json({ error: 'İstifadəçi tapılmadı.' });
+
+  // Aqreqat statistika
+  const stats = await query(
+    `SELECT
+        COUNT(*) FILTER (WHERE status='submitted')                          AS exams_taken,
+        COALESCE(ROUND(AVG(score) FILTER (WHERE status='submitted'),2),0)   AS avg_score,
+        COALESCE(MAX(score) FILTER (WHERE status='submitted'),0)            AS best_score,
+        COALESCE(MIN(score) FILTER (WHERE status='submitted'),0)            AS worst_score,
+        COALESCE(SUM(correct_count) FILTER (WHERE status='submitted'),0)    AS total_correct,
+        COALESCE(SUM(total) FILTER (WHERE status='submitted'),0)            AS total_questions
+     FROM exam_sessions WHERE user_id=$1`,
+    [id]
+  );
+  const st = stats.rows[0];
+  const successRate =
+    Number(st.total_questions) > 0
+      ? Math.round((Number(st.total_correct) / Number(st.total_questions)) * 10000) / 100
+      : 0;
+
+  // Yüklədiyi testlər
+  const uploaded = await query(
+    `SELECT id, title, source_file, question_count, created_at FROM tests WHERE owner_id=$1 ORDER BY created_at DESC`,
+    [id]
+  );
+
+  // Bütün imtahanlar (ən sonu birinci)
+  const exams = await query(
+    `SELECT s.id, t.title AS test_title, s.mode, s.practice, s.total,
+            s.correct_count, s.wrong_count, s.unanswered_count, s.score, s.grade, s.submitted_at
+     FROM exam_sessions s JOIN tests t ON t.id=s.test_id
+     WHERE s.user_id=$1 AND s.status='submitted'
+     ORDER BY s.submitted_at DESC`,
+    [id]
+  );
+
+  res.json({
+    user: u.rows[0],
+    stats: {
+      exams_taken: Number(st.exams_taken),
+      avg_score: Number(st.avg_score),
+      best_score: Number(st.best_score),
+      worst_score: Number(st.worst_score),
+      success_rate: successRate,
+      tests_uploaded: uploaded.rowCount,
+    },
+    latest: exams.rows[0] || null,
+    exams: exams.rows,
+    uploadedTests: uploaded.rows,
+  });
+});
+
 // ---------- Bir istifadəçinin yüklədiyi testlər ----------
 router.get('/users/:id/tests', async (req, res) => {
   const u = await query('SELECT id, full_name, email, created_at FROM users WHERE id=$1', [

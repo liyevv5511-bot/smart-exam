@@ -29,12 +29,22 @@ export default function Admin() {
   const [tests, setTests] = useState<any[]>([]);
   const [stats, setStats] = useState<any>(null);
   const [activity, setActivity] = useState<any[]>([]);
-  const [expanded, setExpanded] = useState<string | null>(null);
-  const [userTests, setUserTests] = useState<Record<string, any[]>>({});
   const [live, setLive] = useState<{ onlineCount: number; inExamCount: number; total: number } | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [viewTest, setViewTest] = useState<any>(null);
   const [viewLoading, setViewLoading] = useState(false);
+  const [student, setStudent] = useState<any>(null);
+
+  const openStudent = async (id: string) => {
+    setStudent({ loading: true });
+    try {
+      const { data } = await api.get(`/admin/users/${id}/detail`);
+      setStudent(data);
+    } catch (e) {
+      toast.error(apiError(e));
+      setStudent(null);
+    }
+  };
   const [bcTitle, setBcTitle] = useState('');
   const [bcBody, setBcBody] = useState('');
   const [sending, setSending] = useState(false);
@@ -115,19 +125,6 @@ export default function Admin() {
       setUsers((us) => us.map((x) => (x.id === u.id ? { ...x, is_active: !x.is_active } : x)));
     } catch (e) {
       toast.error(apiError(e));
-    }
-  };
-
-  const toggleExpand = async (id: string) => {
-    if (expanded === id) return setExpanded(null);
-    setExpanded(id);
-    if (!userTests[id]) {
-      try {
-        const { data } = await api.get(`/admin/users/${id}/tests`);
-        setUserTests((m) => ({ ...m, [id]: data.tests }));
-      } catch (e) {
-        toast.error(apiError(e));
-      }
     }
   };
 
@@ -326,15 +323,12 @@ export default function Admin() {
               {users.map((u) => (
                 <Fragment key={u.id}>
                   <tr
-                    onClick={() => toggleExpand(u.id)}
+                    onClick={() => openStudent(u.id)}
                     className="cursor-pointer border-b border-slate-100 last:border-0 hover:bg-slate-50 dark:border-slate-800/60 dark:hover:bg-slate-800/40"
                   >
                     <td className="py-3 font-medium">
                       <div className="flex items-center gap-2">
-                        <ChevronDown
-                          size={14}
-                          className={`text-slate-400 transition ${expanded === u.id ? 'rotate-180' : ''}`}
-                        />
+                        <Eye size={14} className="text-slate-400" />
                         <span
                           className={`h-2.5 w-2.5 shrink-0 rounded-full ${
                             u.online ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'
@@ -389,69 +383,6 @@ export default function Admin() {
                       </div>
                     </td>
                   </tr>
-
-                  {/* Açılan detal — qeydiyyat məlumatı + yüklədiyi testlər */}
-                  {expanded === u.id && (
-                    <tr className="bg-slate-50 dark:bg-slate-800/30">
-                      <td colSpan={8} className="px-4 py-4">
-                        <div className="grid gap-4 sm:grid-cols-3">
-                          <div className="flex items-center gap-2 text-sm">
-                            <Mail size={16} className="text-brand-500" />
-                            <div>
-                              <p className="text-xs text-slate-400">Qeydiyyat e-poçtu</p>
-                              <p className="font-medium">{u.email}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm">
-                            <Users size={16} className="text-brand-500" />
-                            <div>
-                              <p className="text-xs text-slate-400">Tam ad</p>
-                              <p className="font-medium">{u.full_name}</p>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 text-sm">
-                            <Calendar size={16} className="text-brand-500" />
-                            <div>
-                              <p className="text-xs text-slate-400">Qeydiyyat tarixi</p>
-                              <p className="font-medium">
-                                {new Date(u.created_at).toLocaleString('az')}
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="mt-4">
-                          <p className="mb-2 text-sm font-semibold text-slate-500">
-                            Yüklədiyi testlər ({u.tests_uploaded})
-                          </p>
-                          {!userTests[u.id] ? (
-                            <p className="text-sm text-slate-400">Yüklənir…</p>
-                          ) : userTests[u.id].length === 0 ? (
-                            <p className="text-sm text-slate-400">Heç bir test yükləməyib.</p>
-                          ) : (
-                            <div className="space-y-1.5">
-                              {userTests[u.id].map((t) => (
-                                <div
-                                  key={t.id}
-                                  className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm dark:border-slate-700 dark:bg-slate-900"
-                                >
-                                  <FileSpreadsheet size={15} className="text-emerald-500" />
-                                  <span className="font-medium">{t.title}</span>
-                                  <span className="text-slate-400">· {t.question_count} sual</span>
-                                  {t.source_file && (
-                                    <span className="text-xs text-slate-400">· {t.source_file}</span>
-                                  )}
-                                  <span className="ml-auto text-xs text-slate-400">
-                                    {new Date(t.created_at).toLocaleDateString('az')}
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  )}
                 </Fragment>
               ))}
             </tbody>
@@ -564,6 +495,151 @@ export default function Admin() {
           </div>
         </div>
       )}
+
+      {/* TƏLƏBƏ DETALLARI — statistika + bütün imtahanlar + son nəticə */}
+      {student && (
+        <div
+          onClick={() => setStudent(null)}
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="my-8 w-full max-w-3xl rounded-2xl bg-white p-6 dark:bg-slate-900"
+          >
+            {student.loading ? (
+              <p className="py-10 text-center text-slate-400">Yüklənir…</p>
+            ) : (
+              <>
+                {/* Başlıq */}
+                <div className="mb-5 flex items-start justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <div className="grid h-14 w-14 place-items-center rounded-2xl bg-brand-600 text-xl font-bold text-white">
+                      {student.user.full_name?.[0]?.toUpperCase()}
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-extrabold">{student.user.full_name}</h3>
+                      <p className="text-sm text-slate-400">{student.user.email}</p>
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                        <span className={`rounded-md px-2 py-0.5 font-semibold ${student.user.role === 'admin' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600 dark:bg-slate-800'}`}>
+                          {student.user.role}
+                        </span>
+                        <span className={student.user.is_active ? 'text-emerald-600' : 'text-rose-500'}>
+                          {student.user.is_active ? 'Aktiv' : 'Bloklanıb'}
+                        </span>
+                        <span className="text-slate-400">
+                          · Qeydiyyat: {new Date(student.user.created_at).toLocaleDateString('az')}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <button onClick={() => setStudent(null)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+                    <X size={18} />
+                  </button>
+                </div>
+
+                {/* Statistika kartları */}
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
+                  {[
+                    { label: 'İmtahan', value: student.stats.exams_taken },
+                    { label: 'Orta bal', value: student.stats.avg_score + '%' },
+                    { label: 'Ən yüksək', value: student.stats.best_score + '%' },
+                    { label: 'Uğur', value: student.stats.success_rate + '%' },
+                    { label: 'Yüklədiyi test', value: student.stats.tests_uploaded },
+                  ].map((s) => (
+                    <div key={s.label} className="rounded-xl border border-slate-200 p-3 text-center dark:border-slate-700">
+                      <p className="text-lg font-extrabold">{s.value}</p>
+                      <p className="text-xs text-slate-400">{s.label}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Son nəticə */}
+                {student.latest && (
+                  <div className="mt-5 rounded-2xl border border-brand-200 bg-brand-50 p-4 dark:border-brand-900/50 dark:bg-brand-950/30">
+                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-brand-600">
+                      Son nəticə
+                    </p>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="font-bold">{student.latest.test_title}</p>
+                        <p className="text-sm text-slate-500">
+                          {student.latest.practice ? 'Məşq' : student.latest.mode} ·{' '}
+                          {new Date(student.latest.submitted_at).toLocaleString('az')}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-2xl font-extrabold">{student.latest.score}%</p>
+                        <p className={`text-sm font-bold ${gradeColor(student.latest.grade)}`}>
+                          {student.latest.grade} · {student.latest.correct_count}/{student.latest.total} düz
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Bütün imtahanlar */}
+                <div className="mt-5">
+                  <p className="mb-2 font-bold">Bütün imtahanlar ({student.exams.length})</p>
+                  {student.exams.length === 0 ? (
+                    <p className="text-sm text-slate-400">Hələ imtahan yazmayıb.</p>
+                  ) : (
+                    <div className="max-h-72 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700">
+                      <table className="w-full text-sm">
+                        <thead className="sticky top-0 bg-slate-50 dark:bg-slate-800">
+                          <tr className="text-left text-slate-400">
+                            <th className="px-3 py-2 font-medium">Test</th>
+                            <th className="px-3 py-2 font-medium">Rejim</th>
+                            <th className="px-3 py-2 font-medium">Düz/Səhv</th>
+                            <th className="px-3 py-2 font-medium">Bal</th>
+                            <th className="px-3 py-2 font-medium">Qiymət</th>
+                            <th className="px-3 py-2 font-medium">Tarix</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {student.exams.map((e: any, i: number) => (
+                            <tr key={e.id} className={`border-t border-slate-100 dark:border-slate-800/60 ${i === 0 ? 'bg-brand-50/40 dark:bg-brand-950/20' : ''}`}>
+                              <td className="px-3 py-2 font-medium">{e.test_title}</td>
+                              <td className="px-3 py-2 text-slate-500">{e.practice ? 'məşq' : e.mode}</td>
+                              <td className="px-3 py-2">
+                                <span className="text-emerald-600">{e.correct_count}</span> /{' '}
+                                <span className="text-rose-500">{e.wrong_count}</span>
+                              </td>
+                              <td className="px-3 py-2 font-semibold">{e.score}%</td>
+                              <td className={`px-3 py-2 font-bold ${gradeColor(e.grade)}`}>{e.grade}</td>
+                              <td className="px-3 py-2 text-slate-400">{new Date(e.submitted_at).toLocaleDateString('az')}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                {/* Yüklədiyi testlər */}
+                {student.uploadedTests.length > 0 && (
+                  <div className="mt-5">
+                    <p className="mb-2 font-bold">Yüklədiyi testlər ({student.uploadedTests.length})</p>
+                    <div className="space-y-1.5">
+                      {student.uploadedTests.map((t: any) => (
+                        <div key={t.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-slate-700">
+                          <FileSpreadsheet size={15} className="text-emerald-500" />
+                          <span className="font-medium">{t.title}</span>
+                          <span className="text-slate-400">· {t.question_count} sual</span>
+                          <span className="ml-auto text-xs text-slate-400">{new Date(t.created_at).toLocaleDateString('az')}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
+const gradeColor = (g: string) =>
+  ({ A: 'text-emerald-600', B: 'text-brand-600', C: 'text-amber-600', D: 'text-orange-600', F: 'text-rose-600' } as any)[g] ||
+  'text-slate-600';
