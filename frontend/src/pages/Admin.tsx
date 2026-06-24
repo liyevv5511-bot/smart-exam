@@ -17,6 +17,8 @@ import {
   Shield,
   Eye,
   X,
+  Megaphone,
+  Send,
 } from 'lucide-react';
 import { api, apiError } from '../api/client';
 import { StatCard } from '../components/StatCard';
@@ -33,6 +35,31 @@ export default function Admin() {
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   const [viewTest, setViewTest] = useState<any>(null);
   const [viewLoading, setViewLoading] = useState(false);
+  const [bcTitle, setBcTitle] = useState('');
+  const [bcBody, setBcBody] = useState('');
+  const [sending, setSending] = useState(false);
+
+  const broadcast = async () => {
+    if (!bcTitle.trim()) return toast.error('Başlıq yazın.');
+    setSending(true);
+    try {
+      const { data } = await api.post('/admin/broadcast', { title: bcTitle, body: bcBody });
+      toast.success(`${data.sent} istifadəçiyə bildiriş göndərildi.`);
+      setBcTitle('');
+      setBcBody('');
+    } catch (e) {
+      toast.error(apiError(e));
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const fillNewsTemplate = () => {
+    setBcTitle('🎉 Yeni xüsusiyyətlər!');
+    setBcBody(
+      'İndi testləri OFFLINE (internetsiz) həll edə bilərsiniz — testi "Offline endir" edin, internet olmadan yazın, nəticələr internet qayıdanda avtomatik sinxronlaşır. Həmçinin imtahanda sual aralığı seçib (məs. 1-200) həmin aralıqdan istədiyiniz qədər (məs. 50) təsadüfi sual qarışdıra bilərsiniz!'
+    );
+  };
 
   const openTest = async (id: string) => {
     setViewLoading(true);
@@ -140,6 +167,35 @@ export default function Admin() {
         <StatCard icon={BookOpen} label="Testlər" value={t?.tests ?? '—'} accent="bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300" />
         <StatCard icon={ClipboardList} label="İmtahanlar" value={t?.exams_taken ?? '—'} accent="bg-amber-100 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300" />
         <StatCard icon={Trophy} label="Orta bal" value={t?.avg_score ?? '—'} suffix="%" accent="bg-violet-100 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300" />
+      </div>
+
+      {/* Bildiriş göndər (bütün istifadəçilərə) */}
+      <div className="card">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="flex items-center gap-2 font-bold">
+            <Megaphone size={18} className="text-brand-600" /> Bütün istifadəçilərə bildiriş
+          </h3>
+          <button onClick={fillNewsTemplate} className="text-xs font-medium text-brand-600 hover:underline">
+            Yenilik şablonu
+          </button>
+        </div>
+        <div className="space-y-2">
+          <input
+            value={bcTitle}
+            onChange={(e) => setBcTitle(e.target.value)}
+            className="input"
+            placeholder="Başlıq (məs. 🎉 Yeni xüsusiyyətlər!)"
+          />
+          <textarea
+            value={bcBody}
+            onChange={(e) => setBcBody(e.target.value)}
+            className="input min-h-[80px]"
+            placeholder="Mətn…"
+          />
+          <button onClick={broadcast} disabled={sending} className="btn-primary">
+            <Send size={16} /> {sending ? 'Göndərilir…' : 'Hamıya göndər'}
+          </button>
+        </div>
       </div>
 
       {/* CANLI status zolağı */}

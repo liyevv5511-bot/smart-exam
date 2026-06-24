@@ -135,6 +135,19 @@ router.delete('/tests/:id', async (req, res) => {
   res.json({ message: 'Test silindi.' });
 });
 
+// ---------- Bütün istifadəçilərə bildiriş göndər ----------
+router.post('/broadcast', async (req, res) => {
+  const title = String(req.body.title || '').trim();
+  const body = String(req.body.body || '').trim();
+  if (!title) return res.status(400).json({ error: 'Başlıq tələb olunur.' });
+  const r = await query(
+    `INSERT INTO notifications (user_id, title, body)
+     SELECT id, $1, $2 FROM users`,
+    [title, body || null]
+  );
+  res.json({ sent: r.rowCount });
+});
+
 // ---------- Qlobal statistika ----------
 router.get('/stats', async (_req, res) => {
   const totals = await query(`

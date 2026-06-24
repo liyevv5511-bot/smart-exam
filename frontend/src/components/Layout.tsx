@@ -16,6 +16,7 @@ import { WifiOff, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useOffline } from '../offline/OfflineContext';
+import { NotificationBell } from './NotificationBell';
 
 const nav = [
   { to: '/', icon: LayoutDashboard, label: 'İdarəetmə Paneli', end: true },
@@ -38,10 +39,11 @@ export function Layout() {
           <div className="grid h-9 w-9 place-items-center rounded-xl bg-brand-600 text-white">
             <GraduationCap size={20} />
           </div>
-          <div>
+          <div className="flex-1">
             <p className="text-sm font-bold leading-tight">Ağıllı İmtahan</p>
             <p className="text-xs text-slate-400">Sistemi</p>
           </div>
+          <NotificationBell />
         </div>
 
         <nav className="flex flex-1 flex-col gap-1">
@@ -111,9 +113,12 @@ export function Layout() {
           <span className="flex items-center gap-2 font-bold">
             <GraduationCap size={20} className="text-brand-600" /> Ağıllı İmtahan
           </span>
-          <button onClick={toggle} className="btn-ghost !px-2.5">
-            {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
+          <div className="flex items-center gap-1">
+            <NotificationBell />
+            <button onClick={toggle} className="btn-ghost !px-2.5">
+              {theme === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+          </div>
         </header>
 
         <main className="flex-1 px-4 py-6 md:px-8 md:py-8">

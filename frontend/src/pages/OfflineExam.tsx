@@ -53,8 +53,10 @@ export default function OfflineExam() {
       }
       setTitle(t.test.title);
       let qs = [...t.questions].sort((a, b) => a.position - b.position);
-      if (cfg.mode === 'range') qs = qs.filter((q) => q.position >= cfg.from && q.position <= cfg.to);
-      else if (cfg.mode === 'random') qs = shuffle(qs).slice(0, cfg.count || 20);
+      if (cfg.mode === 'range') {
+        qs = qs.filter((q) => q.position >= cfg.from && q.position <= cfg.to);
+        if (cfg.count) qs = shuffle(qs).slice(0, cfg.count); // aralıqdan təsadüfi N sual
+      } else if (cfg.mode === 'random') qs = shuffle(qs).slice(0, cfg.count || 20);
       if (!qs.length) {
         toast.error('Seçilmiş diapazonda sual yoxdur.');
         navigate('/tests');

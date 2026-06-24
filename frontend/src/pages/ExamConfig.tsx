@@ -19,6 +19,7 @@ export default function ExamConfig() {
   const [from, setFrom] = useState(1);
   const [to, setTo] = useState(50);
   const [count, setCount] = useState(20);
+  const [rangeLimit, setRangeLimit] = useState<number | ''>(''); // aralıqdan neçə sual (boş = hamısı)
   const [timed, setTimed] = useState(false);
   const [minutes, setMinutes] = useState(30);
   const [practice, setPractice] = useState(false);
@@ -52,7 +53,10 @@ export default function ExamConfig() {
       const off = await getOfflineTest(testId!);
       if (!off) return toast.error('Bu test offline endirilməyib.');
       const config: any = { mode };
-      if (mode === 'range') Object.assign(config, { from, to });
+      if (mode === 'range') {
+        Object.assign(config, { from, to });
+        if (rangeLimit) config.count = Number(rangeLimit);
+      }
       if (mode === 'random') config.count = count;
       navigate(`/offline-exam/${testId}`, { state: { config } });
       return;
@@ -66,7 +70,10 @@ export default function ExamConfig() {
         practice,
         topic: topic || undefined,
       };
-      if (mode === 'range') Object.assign(payload, { from, to });
+      if (mode === 'range') {
+        Object.assign(payload, { from, to });
+        if (rangeLimit) payload.count = Number(rangeLimit);
+      }
       if (mode === 'random') payload.count = count;
       const { data } = await api.post('/exams/start', payload);
       navigate(`/exam/${data.session.id}`, { state: data });
@@ -199,9 +206,31 @@ export default function ExamConfig() {
               />
             </div>
           </div>
+          <div>
+            <label className="label">
+              Bu aralıqdan neçə sual qarışdırılsın? <span className="text-slate-400">(boş = hamısı)</span>
+            </label>
+            <input
+              type="number"
+              min={1}
+              max={Math.max(1, Math.min(to, test.question_count) - from + 1)}
+              value={rangeLimit}
+              onChange={(e) => setRangeLimit(e.target.value === '' ? '' : Math.max(1, +e.target.value))}
+              className="input w-40"
+              placeholder="məs. 50"
+            />
+          </div>
           <p className="text-sm text-slate-400">
-            Seçilən: <b>{Math.max(0, Math.min(to, test.question_count) - from + 1)}</b> sual
-            (cəmi {test.question_count})
+            {(() => {
+              const inRange = Math.max(0, Math.min(to, test.question_count) - from + 1);
+              const take = rangeLimit ? Math.min(Number(rangeLimit), inRange) : inRange;
+              return (
+                <>
+                  Aralıqda <b>{inRange}</b> sual var
+                  {rangeLimit ? <> · təsadüfi <b>{take}</b> sual veriləcək</> : <> · hamısı veriləcək</>}
+                </>
+              );
+            })()}
           </p>
         </div>
       )}

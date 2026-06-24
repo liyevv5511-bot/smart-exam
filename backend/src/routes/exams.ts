@@ -103,11 +103,21 @@ router.post('/start', async (req: AuthedRequest, res) => {
       return res
         .status(400)
         .json({ error: `Başlanğıc sual ${from} mövcud deyil. Testdə ${totalAvailable} sual var.` });
-    const q = withTopic(
-      `SELECT id, position, text, options FROM questions WHERE test_id=$1 AND position BETWEEN $2 AND $3${topicClause} ORDER BY position`,
-      [testId, from, to]
-    );
-    qrows = (await query(q.sql, q.params)).rows;
+    // Aralıq + (istəyə bağlı) say: count varsa həmin aralıqdan təsadüfi N sual
+    const params: any[] = [testId, from, to];
+    let sql = `SELECT id, position, text, options FROM questions
+               WHERE test_id=$1 AND position BETWEEN $2 AND $3`;
+    if (topic) {
+      params.push(topic);
+      sql += ` AND topic = $${params.length}`;
+    }
+    if (count) {
+      params.push(count);
+      sql += ` ORDER BY random() LIMIT $${params.length}`;
+    } else {
+      sql += ` ORDER BY position`;
+    }
+    qrows = (await query(sql, params)).rows;
   } else if (mode === 'random') {
     const q = withTopic(
       `SELECT id, position, text, options FROM questions WHERE test_id=$1${topicClause} ORDER BY random() LIMIT $2`,
