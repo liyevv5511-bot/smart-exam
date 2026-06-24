@@ -11,7 +11,7 @@ interface Notif {
   created_at: string;
 }
 
-export function NotificationBell() {
+export function NotificationBell({ align = 'right' }: { align?: 'left' | 'right' }) {
   const [items, setItems] = useState<Notif[]>([]);
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -67,7 +67,9 @@ export function NotificationBell() {
             initial={{ opacity: 0, y: -6, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -6, scale: 0.98 }}
-            className="absolute right-0 z-50 mt-2 w-80 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-soft dark:border-slate-800 dark:bg-slate-900"
+            className={`absolute z-50 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-soft dark:border-slate-800 dark:bg-slate-900 ${
+              align === 'left' ? 'left-0' : 'right-0'
+            }`}
           >
             <div className="flex items-center justify-between border-b border-slate-100 px-4 py-2.5 dark:border-slate-800">
               <p className="text-sm font-bold">Bildirişlər</p>

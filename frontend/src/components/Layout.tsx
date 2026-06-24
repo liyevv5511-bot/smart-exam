@@ -43,7 +43,7 @@ export function Layout() {
             <p className="text-sm font-bold leading-tight">Ağıllı İmtahan</p>
             <p className="text-xs text-slate-400">Sistemi</p>
           </div>
-          <NotificationBell />
+          <NotificationBell align="left" />
         </div>
 
         <nav className="flex flex-1 flex-col gap-1">
