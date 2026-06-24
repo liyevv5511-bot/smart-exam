@@ -134,23 +134,35 @@ export function Layout() {
         </main>
 
         {/* Mobil alt naviqasiya */}
-        <nav className="sticky bottom-0 z-20 grid grid-cols-5 border-t border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 lg:hidden">
-          {nav.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) =>
-                `flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium ${
-                  isActive ? 'text-brand-600' : 'text-slate-400'
-                }`
-              }
+        {(() => {
+          const mobileItems =
+            user?.role === 'admin'
+              ? [...nav, { to: '/admin', icon: Shield, label: 'Admin' }]
+              : nav;
+          return (
+            <nav
+              className={`sticky bottom-0 z-20 grid border-t border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 lg:hidden ${
+                mobileItems.length === 6 ? 'grid-cols-6' : 'grid-cols-5'
+              }`}
             >
-              <item.icon size={20} />
-              {item.label.split(' ')[0]}
-            </NavLink>
-          ))}
-        </nav>
+              {mobileItems.map((item: any) => (
+                <NavLink
+                  key={item.to}
+                  to={item.to}
+                  end={item.end}
+                  className={({ isActive }) =>
+                    `flex flex-col items-center gap-1 py-2.5 text-[10px] font-medium ${
+                      isActive ? 'text-brand-600' : 'text-slate-400'
+                    }`
+                  }
+                >
+                  <item.icon size={20} />
+                  {item.label.split(' ')[0]}
+                </NavLink>
+              ))}
+            </nav>
+          );
+        })()}
       </div>
     </div>
   );
