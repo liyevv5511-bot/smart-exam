@@ -382,6 +382,16 @@ router.get('/:id/result', async (req: AuthedRequest, res) => {
   res.json({ result: s.rows[0] });
 });
 
+// ---------- Nəticəni (imtahan sessiyasını) sil ----------
+router.delete('/:id', async (req: AuthedRequest, res) => {
+  const r = await query('DELETE FROM exam_sessions WHERE id=$1 AND user_id=$2', [
+    req.params.id,
+    req.user!.sub,
+  ]);
+  if (!r.rowCount) return res.status(404).json({ error: 'Nəticə tapılmadı.' });
+  res.json({ message: 'Nəticə silindi.' });
+});
+
 // ---------- Səhv sualların icmalı ----------
 router.get('/:id/review', async (req: AuthedRequest, res) => {
   const s = await query('SELECT id FROM exam_sessions WHERE id=$1 AND user_id=$2', [

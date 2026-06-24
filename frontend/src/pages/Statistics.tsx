@@ -11,8 +11,9 @@ import {
   Cell,
   CartesianGrid,
 } from 'recharts';
-import { TrendingUp, PieChart as PieIcon, History } from 'lucide-react';
-import { api } from '../api/client';
+import { TrendingUp, PieChart as PieIcon, History, Trash2 } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { api, apiError } from '../api/client';
 
 const GRADE_COLORS: Record<string, string> = {
   A: '#10b981',
@@ -28,6 +29,17 @@ export default function Statistics() {
   useEffect(() => {
     api.get('/stats/analytics').then((r) => setData(r.data));
   }, []);
+
+  const deleteResult = async (id: string) => {
+    if (!confirm('Bu nəticə silinsin?')) return;
+    try {
+      await api.delete(`/exams/${id}`);
+      setData((d: any) => ({ ...d, history: d.history.filter((h: any) => h.id !== id) }));
+      toast.success('Nəticə silindi.');
+    } catch (e) {
+      toast.error(apiError(e));
+    }
+  };
 
   if (!data) return <p className="text-slate-400">Yüklənir…</p>;
 
@@ -129,6 +141,7 @@ export default function Statistics() {
                     <th className="pb-2 font-medium">Düz/Səhv</th>
                     <th className="pb-2 font-medium">Bal</th>
                     <th className="pb-2 font-medium">Tarix</th>
+                    <th className="pb-2 font-medium"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -143,6 +156,15 @@ export default function Statistics() {
                       <td className="py-3 font-semibold">{h.score}%</td>
                       <td className="py-3 text-slate-400">
                         {new Date(h.submitted_at).toLocaleDateString('az')}
+                      </td>
+                      <td className="py-3 text-right">
+                        <button
+                          onClick={() => deleteResult(h.id)}
+                          className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-950/40"
+                          title="Nəticəni sil"
+                        >
+                          <Trash2 size={16} />
+                        </button>
                       </td>
                     </tr>
                   ))}

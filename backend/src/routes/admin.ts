@@ -110,6 +110,24 @@ router.get('/tests', async (_req, res) => {
   res.json({ tests: rows });
 });
 
+// ---------- İstənilən testin MƏZMUNUNU gör (admin) ----------
+router.get('/tests/:id', async (req, res) => {
+  const t = await query(
+    `SELECT t.id, t.title, t.source_file, t.question_count, t.created_at,
+            u.full_name AS owner_name, u.email AS owner_email
+     FROM tests t JOIN users u ON u.id = t.owner_id
+     WHERE t.id = $1`,
+    [req.params.id]
+  );
+  if (!t.rowCount) return res.status(404).json({ error: 'Test tapılmadı.' });
+  const q = await query(
+    `SELECT position, text, options, option_count, correct_index, explanation, topic, difficulty
+     FROM questions WHERE test_id = $1 ORDER BY position`,
+    [req.params.id]
+  );
+  res.json({ test: t.rows[0], questions: q.rows });
+});
+
 // ---------- Testi sil ----------
 router.delete('/tests/:id', async (req, res) => {
   const r = await query('DELETE FROM tests WHERE id=$1', [req.params.id]);

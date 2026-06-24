@@ -15,6 +15,8 @@ import {
   FileSpreadsheet,
   Edit3,
   Shield,
+  Eye,
+  X,
 } from 'lucide-react';
 import { api, apiError } from '../api/client';
 import { StatCard } from '../components/StatCard';
@@ -29,6 +31,22 @@ export default function Admin() {
   const [userTests, setUserTests] = useState<Record<string, any[]>>({});
   const [live, setLive] = useState<{ onlineCount: number; inExamCount: number; total: number } | null>(null);
   const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
+  const [viewTest, setViewTest] = useState<any>(null);
+  const [viewLoading, setViewLoading] = useState(false);
+
+  const openTest = async (id: string) => {
+    setViewLoading(true);
+    setViewTest({ loading: true });
+    try {
+      const { data } = await api.get(`/admin/tests/${id}`);
+      setViewTest(data);
+    } catch (e) {
+      toast.error(apiError(e));
+      setViewTest(null);
+    } finally {
+      setViewLoading(false);
+    }
+  };
 
   const loadLive = () => {
     api.get('/admin/users').then((r) => {
@@ -401,18 +419,93 @@ export default function Admin() {
               {tests.map((t) => (
                 <tr key={t.id} className="border-b border-slate-100 last:border-0 dark:border-slate-800/60">
                   <td className="py-3 font-medium">{t.title}</td>
-                  <td className="py-3 text-slate-500">{t.owner_name}</td>
+                  <td className="py-3 text-slate-500">
+                    <div>{t.owner_name}</div>
+                    <div className="text-xs text-slate-400">{t.owner_email}</div>
+                  </td>
                   <td className="py-3">{t.question_count}</td>
                   <td className="py-3 text-slate-400">{new Date(t.created_at).toLocaleDateString('az')}</td>
                   <td className="py-3">
-                    <button onClick={() => delTest(t.id)} className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-950/40">
-                      <Trash2 size={16} />
-                    </button>
+                    <div className="flex gap-1">
+                      <button onClick={() => openTest(t.id)} className="rounded-lg p-1.5 text-slate-400 hover:bg-brand-50 hover:text-brand-600 dark:hover:bg-brand-950/40" title="Məzmuna bax">
+                        <Eye size={16} />
+                      </button>
+                      <button onClick={() => delTest(t.id)} className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-950/40" title="Sil">
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* Test məzmunu — istənilən yüklənmiş faylın sualları */}
+      {viewTest && (
+        <div
+          onClick={() => setViewTest(null)}
+          className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-black/50 p-4"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="my-8 w-full max-w-2xl rounded-2xl bg-white p-6 dark:bg-slate-900"
+          >
+            {viewLoading || viewTest.loading ? (
+              <p className="py-8 text-center text-slate-400">Yüklənir…</p>
+            ) : (
+              <>
+                <div className="mb-4 flex items-start justify-between gap-4">
+                  <div>
+                    <h3 className="text-lg font-bold">{viewTest.test.title}</h3>
+                    <p className="text-sm text-slate-400">
+                      {viewTest.test.owner_name} ({viewTest.test.owner_email}) ·{' '}
+                      {viewTest.test.question_count} sual
+                      {viewTest.test.source_file && ` · ${viewTest.test.source_file}`}
+                    </p>
+                  </div>
+                  <button onClick={() => setViewTest(null)} className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">
+                    <X size={18} />
+                  </button>
+                </div>
+                <div className="max-h-[70vh] space-y-4 overflow-y-auto pr-1">
+                  {viewTest.questions.map((q: any) => (
+                    <div key={q.position} className="rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+                      <p className="mb-2 font-medium">
+                        {q.position}. {q.text}
+                        {q.topic && (
+                          <span className="ml-2 rounded bg-slate-100 px-1.5 py-0.5 text-xs text-slate-500 dark:bg-slate-800">
+                            {q.topic}
+                          </span>
+                        )}
+                      </p>
+                      <div className="space-y-1 text-sm">
+                        {q.options.map((o: string, i: number) => (
+                          <p
+                            key={i}
+                            className={
+                              i === q.correct_index
+                                ? 'font-semibold text-emerald-600'
+                                : 'text-slate-500'
+                            }
+                          >
+                            {String.fromCharCode(65 + i)}) {o}
+                            {i === q.correct_index && ' ✓'}
+                          </p>
+                        ))}
+                      </div>
+                      {q.explanation && (
+                        <p className="mt-2 rounded bg-amber-50 px-2 py-1 text-xs text-amber-700 dark:bg-amber-950/20 dark:text-amber-300">
+                          💡 {q.explanation}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
         </div>
       )}
     </div>

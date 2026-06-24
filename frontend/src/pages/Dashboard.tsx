@@ -10,6 +10,7 @@ import {
   ArrowRight,
   RotateCcw,
   AlertCircle,
+  Trash2,
 } from 'lucide-react';
 import { api, apiError } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -49,6 +50,21 @@ export default function Dashboard() {
     } catch (e) {
       toast.error(apiError(e));
       setStarting(false);
+    }
+  };
+
+  const deleteResult = async (id: string) => {
+    if (!confirm('Bu nəticə silinsin?')) return;
+    try {
+      await api.delete(`/exams/${id}`);
+      setData((d) =>
+        d ? { ...d, recentActivity: d.recentActivity.filter((a) => a.id !== id) } : d
+      );
+      // səhvlər bankı sayını da yenilə
+      api.get('/exams/mistakes/summary').then((r) => setMistakes(r.data.total)).catch(() => {});
+      toast.success('Nəticə silindi.');
+    } catch (e) {
+      toast.error(apiError(e));
     }
   };
 
@@ -149,6 +165,7 @@ export default function Dashboard() {
                   <th className="pb-2 font-medium">Bal</th>
                   <th className="pb-2 font-medium">Qiymət</th>
                   <th className="pb-2 font-medium">Tarix</th>
+                  <th className="pb-2 font-medium"></th>
                 </tr>
               </thead>
               <tbody>
@@ -164,6 +181,15 @@ export default function Dashboard() {
                     <td className={`py-3 font-bold ${gradeColor(a.grade)}`}>{a.grade}</td>
                     <td className="py-3 text-slate-400">
                       {new Date(a.submitted_at).toLocaleDateString('az')}
+                    </td>
+                    <td className="py-3 text-right">
+                      <button
+                        onClick={() => deleteResult(a.id)}
+                        className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-500 dark:hover:bg-rose-950/40"
+                        title="Nəticəni sil"
+                      >
+                        <Trash2 size={16} />
+                      </button>
                     </td>
                   </tr>
                 ))}
