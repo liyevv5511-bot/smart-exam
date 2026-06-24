@@ -12,8 +12,10 @@ import {
   Sun,
   GraduationCap,
 } from 'lucide-react';
+import { WifiOff, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { useOffline } from '../offline/OfflineContext';
 
 const nav = [
   { to: '/', icon: LayoutDashboard, label: 'İdarəetmə Paneli', end: true },
@@ -115,6 +117,7 @@ export function Layout() {
         </header>
 
         <main className="flex-1 px-4 py-6 md:px-8 md:py-8">
+          <OfflineBanner />
           <motion.div
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
@@ -144,6 +147,41 @@ export function Layout() {
           ))}
         </nav>
       </div>
+    </div>
+  );
+}
+
+/** Offline / sinxronizasiya status zolağı */
+function OfflineBanner() {
+  const { online, pendingCount, syncNow } = useOffline();
+  if (online && pendingCount === 0) return null;
+  return (
+    <div className="mx-auto mb-4 max-w-6xl">
+      {!online ? (
+        <div className="flex items-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-800 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-200">
+          <WifiOff size={16} />
+          <span>
+            <b>Offline rejim.</b> Endirilmiş testləri həll edə bilərsiniz; nəticələr internet
+            qayıdanda sinxronlaşacaq.
+          </span>
+          {pendingCount > 0 && (
+            <span className="ml-auto rounded-full bg-amber-200 px-2 py-0.5 text-xs font-bold dark:bg-amber-900">
+              {pendingCount} gözləyir
+            </span>
+          )}
+        </div>
+      ) : (
+        <button
+          onClick={syncNow}
+          className="flex w-full items-center gap-2 rounded-xl border border-brand-200 bg-brand-50 px-4 py-2.5 text-sm text-brand-700 hover:bg-brand-100 dark:border-brand-900/50 dark:bg-brand-950/30 dark:text-brand-200"
+        >
+          <RefreshCw size={16} />
+          <span>
+            <b>{pendingCount}</b> offline nəticə sinxronlaşmağı gözləyir — indi göndərmək üçün
+            klikləyin.
+          </span>
+        </button>
+      )}
     </div>
   );
 }

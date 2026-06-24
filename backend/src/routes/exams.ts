@@ -179,6 +179,121 @@ router.post('/start', async (req: AuthedRequest, res) => {
   }
 });
 
+// ---------- OFFLINE nəticəni serverə sinxronlaşdır ----------
+const syncSchema = z.object({
+  testId: z.string().uuid(),
+  mode: z.enum(['range', 'random', 'full', 'mistakes', 'retry_wrong']).default('full'),
+  practice: z.boolean().optional(),
+  startedAt: z.string().optional(),
+  answers: z.array(
+    z.object({
+      questionId: z.string().uuid(),
+      // istifadəçinin seçdiyi ORİJİNAL variant indeksi (offline-da variantlar qarışmır)
+      originalIndex: z.number().int().min(0).nullable(),
+    })
+  ),
+});
+
+router.post('/sync', async (req: AuthedRequest, res) => {
+  const parsed = syncSchema.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ error: parsed.error.issues[0].message });
+  const { testId, mode, practice, startedAt, answers } = parsed.data;
+
+  const test = await query('SELECT id FROM tests WHERE id=$1 AND owner_id=$2', [
+    testId,
+    req.user!.sub,
+  ]);
+  if (!test.rowCount) return res.status(404).json({ error: 'Test tapılmadı.' });
+  if (!answers.length) return res.status(400).json({ error: 'Cavab yoxdur.' });
+
+  // Bu sualların düzgün cavablarını və variant saylarını gətir
+  const qids = answers.map((a) => a.questionId);
+  const qrows = (
+    await query(
+      'SELECT id, correct_index, option_count FROM questions WHERE test_id=$1 AND id = ANY($2::uuid[])',
+      [testId, qids]
+    )
+  ).rows;
+  const qmap = new Map(qrows.map((q) => [q.id, q]));
+
+  // Nəticəni hesabla
+  let correct = 0;
+  let unanswered = 0;
+  const rows: { qid: string; sel: number | null; order: number[]; isCorrect: boolean | null }[] = [];
+  for (const a of answers) {
+    const q = qmap.get(a.questionId);
+    if (!q) continue;
+    const order = Array.from({ length: q.option_count }, (_, i) => i); // identik (qarışmır)
+    if (a.originalIndex === null) {
+      unanswered++;
+      rows.push({ qid: a.questionId, sel: null, order, isCorrect: null });
+    } else {
+      const ok = a.originalIndex === q.correct_index;
+      if (ok) correct++;
+      rows.push({ qid: a.questionId, sel: a.originalIndex, order, isCorrect: ok });
+    }
+  }
+  const total = rows.length;
+  const wrong = total - correct - unanswered;
+  const score = total ? Math.round((correct / total) * 10000) / 100 : 0;
+  const grade = letterGrade(score);
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const s = await client.query(
+      `INSERT INTO exam_sessions
+        (user_id, test_id, mode, practice, config, question_order, status,
+         total, correct_count, wrong_count, unanswered_count, score, grade, started_at, submitted_at)
+       VALUES ($1,$2,$3,$4,'{"offline":true}',$5,'submitted',$6,$7,$8,$9,$10,$11,$12, now())
+       RETURNING id`,
+      [
+        req.user!.sub,
+        testId,
+        mode,
+        !!practice,
+        JSON.stringify(rows.map((r) => r.qid)),
+        total,
+        correct,
+        wrong,
+        unanswered,
+        score,
+        grade,
+        startedAt ? new Date(startedAt) : new Date(),
+      ]
+    );
+    const sessionId = s.rows[0].id;
+
+    // exam_answers toplu insert (hissə-hissə)
+    const CHUNK = 500;
+    for (let start = 0; start < rows.length; start += CHUNK) {
+      const slice = rows.slice(start, start + CHUNK);
+      const vals: any[] = [];
+      const ph: string[] = [];
+      slice.forEach((r, i) => {
+        const b = i * 5;
+        ph.push(`($${b + 1},$${b + 2},$${b + 3},$${b + 4},$${b + 5})`);
+        vals.push(sessionId, r.qid, r.sel, JSON.stringify(r.order), r.isCorrect);
+      });
+      await client.query(
+        `INSERT INTO exam_answers (session_id, question_id, selected_index, shuffled_order, is_correct)
+         VALUES ${ph.join(',')}`,
+        vals
+      );
+    }
+    await client.query('COMMIT');
+    res.status(201).json({
+      result: { sessionId, total, correctCount: correct, wrong, unanswered, score, grade },
+    });
+  } catch (e) {
+    await client.query('ROLLBACK');
+    console.error(e);
+    res.status(500).json({ error: 'Sinxronizasiya alınmadı.' });
+  } finally {
+    client.release();
+  }
+});
+
 // ---------- Davam etmə (brauzer bağlandıqdan sonra) ----------
 router.get('/:id/resume', async (req: AuthedRequest, res) => {
   const s = await query('SELECT * FROM exam_sessions WHERE id=$1 AND user_id=$2', [

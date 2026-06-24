@@ -12,6 +12,7 @@ import Tests from './pages/Tests';
 import TestEditor from './pages/TestEditor';
 import ExamConfig from './pages/ExamConfig';
 import ExamRunner from './pages/ExamRunner';
+import OfflineExam from './pages/OfflineExam';
 import Results from './pages/Results';
 import Review from './pages/Review';
 import Statistics from './pages/Statistics';
@@ -78,6 +79,7 @@ export default function App() {
         <Route path="/tests" element={<Tests />} />
         <Route path="/tests/:testId/edit" element={<TestEditor />} />
         <Route path="/tests/:testId/config" element={<ExamConfig />} />
+        <Route path="/offline-exam/:testId" element={<OfflineExam />} />
         <Route path="/results/:sessionId" element={<Results />} />
         <Route path="/review/:sessionId" element={<Review />} />
         <Route path="/statistics" element={<Statistics />} />

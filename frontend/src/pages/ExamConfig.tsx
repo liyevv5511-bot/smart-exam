@@ -5,12 +5,15 @@ import { motion } from 'framer-motion';
 import { ListOrdered, Shuffle, Layers, Clock, ArrowLeft, Play, GraduationCap, Tag } from 'lucide-react';
 import { api, apiError } from '../api/client';
 import type { Test, TopicCount } from '../types';
+import { getOfflineTest } from '../offline/db';
+import { useOffline } from '../offline/OfflineContext';
 
 type Mode = 'range' | 'random' | 'full';
 
 export default function ExamConfig() {
   const { testId } = useParams();
   const navigate = useNavigate();
+  const { online } = useOffline();
   const [test, setTest] = useState<Test | null>(null);
   const [mode, setMode] = useState<Mode>('full');
   const [from, setFrom] = useState(1);
@@ -24,15 +27,36 @@ export default function ExamConfig() {
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    api.get(`/tests/${testId}`).then((r) => {
-      setTest(r.data.test);
-      setTo(Math.min(50, r.data.test.question_count));
-      setCount(Math.min(20, r.data.test.question_count));
-    });
+    api
+      .get(`/tests/${testId}`)
+      .then((r) => {
+        setTest(r.data.test);
+        setTo(Math.min(50, r.data.test.question_count));
+        setCount(Math.min(20, r.data.test.question_count));
+      })
+      .catch(async () => {
+        // İnternet yoxdursa offline endirilmiş testdən oxu
+        const off = await getOfflineTest(testId!);
+        if (off) {
+          setTest(off.test as any);
+          setTo(Math.min(50, off.test.question_count));
+          setCount(Math.min(20, off.test.question_count));
+        }
+      });
     api.get(`/tests/${testId}/topics`).then((r) => setTopics(r.data.topics)).catch(() => {});
   }, [testId]);
 
   const start = async () => {
+    // İnternet yoxdursa → offline imtahan (server olmadan)
+    if (!online) {
+      const off = await getOfflineTest(testId!);
+      if (!off) return toast.error('Bu test offline endirilməyib.');
+      const config: any = { mode };
+      if (mode === 'range') Object.assign(config, { from, to });
+      if (mode === 'random') config.count = count;
+      navigate(`/offline-exam/${testId}`, { state: { config } });
+      return;
+    }
     setLoading(true);
     try {
       const payload: any = {

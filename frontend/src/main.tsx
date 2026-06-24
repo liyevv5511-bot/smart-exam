@@ -5,6 +5,7 @@ import { Toaster } from 'react-hot-toast';
 import App from './App';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { OfflineProvider } from './offline/OfflineContext';
 import './index.css';
 
 // PWA service worker qeydiyyatı (telefona quraşdırma / oflayn shell)
@@ -19,6 +20,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <ThemeProvider>
       <BrowserRouter>
         <AuthProvider>
+          <OfflineProvider>
           <App />
           <Toaster
             position="top-right"
@@ -27,6 +29,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
                 '!bg-white dark:!bg-slate-800 !text-slate-800 dark:!text-slate-100 !rounded-xl',
             }}
           />
+          </OfflineProvider>
         </AuthProvider>
       </BrowserRouter>
     </ThemeProvider>
