@@ -19,8 +19,13 @@ interface AuthCtx {
 const Ctx = createContext<AuthCtx>(null as any);
 export const useAuth = () => useContext(Ctx);
 
+const cacheUser = (u: User | null) => {
+  if (u) localStorage.setItem('authUser', JSON.stringify(u));
+  else localStorage.removeItem('authUser');
+};
+
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUserState] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -30,12 +35,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
       return;
     }
+    // OFFLINE üçün: keşlənmiş istifadəçini dərhal bərpa et
+    const cached = localStorage.getItem('authUser');
+    if (cached) {
+      try {
+        setUserState(JSON.parse(cached));
+      } catch {}
+    }
     api
       .get('/auth/me')
-      .then((r) => setUser(r.data.user))
-      .catch(() => {
-        localStorage.removeItem('token');
-        sessionStorage.removeItem('token');
+      .then((r) => {
+        setUserState(r.data.user);
+        cacheUser(r.data.user);
+      })
+      .catch((err) => {
+        // Yalnız token həqiqətən etibarsızdırsa (401) çıxış et.
+        // Offline / şəbəkə xətasında keşlənmiş istifadəçi qalır.
+        if (err?.response?.status === 401) {
+          localStorage.removeItem('token');
+          sessionStorage.removeItem('token');
+          cacheUser(null);
+          setUserState(null);
+        }
       })
       .finally(() => setLoading(false));
   }, []);
@@ -45,13 +66,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('token');
     sessionStorage.removeItem('token');
     (remember ? localStorage : sessionStorage).setItem('token', token);
-    setUser(u);
+    cacheUser(u);
+    setUserState(u);
   };
 
   const logout = () => {
     localStorage.removeItem('token');
     sessionStorage.removeItem('token');
-    setUser(null);
+    cacheUser(null);
+    setUserState(null);
+  };
+
+  const setUser = (u: User) => {
+    cacheUser(u);
+    setUserState(u);
   };
 
   return (

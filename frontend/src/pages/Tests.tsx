@@ -20,6 +20,7 @@ import {
   saveOfflineTest,
   listOfflineTestIds,
   removeOfflineTest,
+  getOfflineTest,
 } from '../offline/db';
 import { useOffline } from '../offline/OfflineContext';
 
@@ -35,6 +36,16 @@ export default function Tests() {
     api
       .get('/tests')
       .then((r) => setTests(r.data.tests))
+      .catch(async () => {
+        // OFFLINE: server cavab vermir → endirilmiş testləri göstər
+        const ids = await listOfflineTestIds();
+        const offline: any[] = [];
+        for (const id of ids) {
+          const o = await getOfflineTest(id);
+          if (o) offline.push({ ...o.test, created_at: o.downloadedAt });
+        }
+        setTests(offline);
+      })
       .finally(() => setLoading(false));
 
   useEffect(() => {
