@@ -1,12 +1,26 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
-import { User, Lock, History, FileText } from 'lucide-react';
+import {
+  User,
+  Lock,
+  History,
+  FileText,
+  LifeBuoy,
+  Phone,
+  Mail,
+  MessageCircle,
+} from 'lucide-react';
 import { api, apiError } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 
+// ---- Admin əlaqə məlumatları (dəyişmək üçün buradan redaktə edin) ----
+const ADMIN_PHONE = '060-288-88-40';
+const ADMIN_PHONE_INTL = '994602888840'; // +994, baş sıfır atılmış (tel/WhatsApp üçün)
+const ADMIN_EMAIL = 'liyevv5511@gmail.com';
+
 export default function Profile() {
   const { user, setUser } = useAuth();
-  const [tab, setTab] = useState<'profile' | 'password' | 'history'>('profile');
+  const [tab, setTab] = useState<'profile' | 'password' | 'history' | 'support'>('profile');
   const [fullName, setFullName] = useState(user?.full_name || '');
   const [pwd, setPwd] = useState({ currentPassword: '', newPassword: '' });
   const [history, setHistory] = useState<any[]>([]);
@@ -41,6 +55,7 @@ export default function Profile() {
     { id: 'profile' as const, icon: User, label: 'Profil' },
     { id: 'password' as const, icon: Lock, label: 'Şifrə' },
     { id: 'history' as const, icon: History, label: 'Tarixçə' },
+    { id: 'support' as const, icon: LifeBuoy, label: 'Dəstək' },
   ];
 
   return (
@@ -137,6 +152,77 @@ export default function Profile() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {tab === 'support' && (
+        <div className="space-y-4">
+          <div className="card bg-gradient-to-br from-brand-600 to-brand-800 text-white">
+            <div className="flex items-center gap-3">
+              <div className="grid h-12 w-12 place-items-center rounded-xl bg-white/15 backdrop-blur">
+                <LifeBuoy size={24} />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold">Admin ilə əlaqə</h2>
+                <p className="text-sm text-brand-100">
+                  Sual, problem və ya təklifiniz varsa bizimlə əlaqə saxlayın.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Telefon */}
+          <div className="card">
+            <div className="mb-3 flex items-center gap-3">
+              <div className="grid h-11 w-11 place-items-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
+                <Phone size={20} />
+              </div>
+              <div>
+                <p className="text-sm text-slate-400">Telefon</p>
+                <p className="font-bold tracking-wide">{ADMIN_PHONE}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <a href={`tel:+${ADMIN_PHONE_INTL}`} className="btn-ghost justify-center">
+                <Phone size={16} /> Zəng et
+              </a>
+              <a
+                href={`https://wa.me/${ADMIN_PHONE_INTL}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn justify-center bg-[#25D366] text-white hover:opacity-90"
+              >
+                <MessageCircle size={16} /> WhatsApp
+              </a>
+            </div>
+          </div>
+
+          {/* E-poçt */}
+          <div className="card">
+            <div className="mb-3 flex items-center gap-3">
+              <div className="grid h-11 w-11 place-items-center rounded-xl bg-brand-100 text-brand-700 dark:bg-brand-950/50 dark:text-brand-300">
+                <Mail size={20} />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm text-slate-400">E-poçt</p>
+                <p className="truncate font-bold">{ADMIN_EMAIL}</p>
+              </div>
+            </div>
+            <a
+              href={`mailto:${ADMIN_EMAIL}?subject=${encodeURIComponent(
+                'Ağıllı İmtahan — Dəstək'
+              )}&body=${encodeURIComponent(
+                `Salam,\n\nAd: ${user?.full_name || ''}\nE-poçt: ${user?.email || ''}\n\nMesajınız:\n`
+              )}`}
+              className="btn-primary w-full"
+            >
+              <Mail size={16} /> Mesaj yaz
+            </a>
+          </div>
+
+          <p className="text-center text-xs text-slate-400">
+            İş saatları: hər gün 09:00 – 21:00
+          </p>
         </div>
       )}
     </div>
