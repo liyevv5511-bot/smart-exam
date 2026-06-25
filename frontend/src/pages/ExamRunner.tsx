@@ -125,6 +125,8 @@ export default function ExamRunner() {
   const select = async (qid: string, index: number) => {
     if (practice && feedback[qid]) return; // məşq rejimində cavab kilidlənir
     setAnswers((a) => ({ ...a, [qid]: index }));
+    // ref-i DƏRHAL yenilə ki, flush/check köhnə deyil, yeni cavabı göndərsin
+    answersRef.current = { ...answersRef.current, [qid]: index };
     dirty.current.add(qid);
 
     // Məşq rejimi: dərhal yoxla
