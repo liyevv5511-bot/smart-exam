@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { api, apiError } from '../api/client';
 import { StatCard } from '../components/StatCard';
+import { Avatar } from '../components/Avatar';
 
 export default function Admin() {
   const [tab, setTab] = useState<'activity' | 'users' | 'tests'>('activity');
@@ -328,13 +329,15 @@ export default function Admin() {
                   >
                     <td className="py-3 font-medium">
                       <div className="flex items-center gap-2">
-                        <Eye size={14} className="text-slate-400" />
-                        <span
-                          className={`h-2.5 w-2.5 shrink-0 rounded-full ${
-                            u.online ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'
-                          }`}
-                          title={u.online ? 'Onlayn' : 'Oflayn'}
-                        />
+                        <div className="relative">
+                          <Avatar url={u.avatar_url} name={u.full_name} size={32} />
+                          <span
+                            className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white dark:border-slate-900 ${
+                              u.online ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600'
+                            }`}
+                            title={u.online ? 'Onlayn' : 'Oflayn'}
+                          />
+                        </div>
                         {u.full_name}
                       </div>
                     </td>
@@ -513,9 +516,7 @@ export default function Admin() {
                 {/* Başlıq */}
                 <div className="mb-5 flex items-start justify-between gap-4">
                   <div className="flex items-center gap-3">
-                    <div className="grid h-14 w-14 place-items-center rounded-2xl bg-brand-600 text-xl font-bold text-white">
-                      {student.user.full_name?.[0]?.toUpperCase()}
-                    </div>
+                    <Avatar url={student.user.avatar_url} name={student.user.full_name} size={56} className="rounded-2xl" />
                     <div>
                       <h3 className="text-xl font-extrabold">{student.user.full_name}</h3>
                       <p className="text-sm text-slate-400">{student.user.email}</p>
@@ -628,6 +629,50 @@ export default function Admin() {
                           <span className="ml-auto text-xs text-slate-400">{new Date(t.created_at).toLocaleDateString('az')}</span>
                         </div>
                       ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* İstifadəçinin rəyi */}
+                {student.review && (
+                  <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/50 dark:bg-amber-950/20">
+                    <p className="mb-1 flex items-center gap-2 text-sm font-bold">
+                      Rəyi:
+                      <span className="text-amber-500">
+                        {'★'.repeat(student.review.rating)}
+                        <span className="text-slate-300">{'★'.repeat(5 - student.review.rating)}</span>
+                      </span>
+                    </p>
+                    {student.review.comment && (
+                      <p className="text-sm text-slate-600 dark:text-slate-300">"{student.review.comment}"</p>
+                    )}
+                  </div>
+                )}
+
+                {/* BÜTÜN HƏRƏKƏTLƏR — fəaliyyət lenti */}
+                {student.activity?.length > 0 && (
+                  <div className="mt-5">
+                    <p className="mb-2 font-bold">Bütün fəaliyyət ({student.activity.length})</p>
+                    <div className="max-h-72 space-y-0 overflow-y-auto rounded-xl border border-slate-200 dark:border-slate-700">
+                      {student.activity.map((a: any, i: number) => {
+                        const color =
+                          a.type === 'exam' ? 'bg-brand-500'
+                          : a.type === 'upload' ? 'bg-emerald-500'
+                          : a.type === 'review' ? 'bg-amber-500'
+                          : a.type === 'avatar' ? 'bg-violet-500'
+                          : 'bg-slate-400';
+                        return (
+                          <div key={i} className="flex items-start gap-3 border-b border-slate-100 px-3 py-2.5 last:border-0 dark:border-slate-800/60">
+                            <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${color}`} />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm">{a.text}</p>
+                              <p className="text-xs text-slate-400">
+                                {new Date(a.when).toLocaleString('az')}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}

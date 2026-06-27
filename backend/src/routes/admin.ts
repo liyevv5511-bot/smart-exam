@@ -25,7 +25,7 @@ router.get('/activity', async (_req, res) => {
 // ---------- Bütün tələbələr + statistika + CANLI status ----------
 router.get('/users', async (_req, res) => {
   const { rows } = await query(
-    `SELECT u.id, u.full_name, u.email, u.role, u.is_active, u.created_at, u.last_seen,
+    `SELECT u.id, u.full_name, u.email, u.role, u.is_active, u.created_at, u.last_seen, u.avatar_url,
             COALESCE(st.tests_uploaded,0) AS tests_uploaded,
             COALESCE(st.exams_taken,0)    AS exams_taken,
             COALESCE(st.avg_score,0)      AS avg_score,
@@ -53,10 +53,11 @@ router.get('/users', async (_req, res) => {
 router.get('/users/:id/detail', async (req, res) => {
   const id = req.params.id;
   const u = await query(
-    `SELECT id, full_name, email, role, is_active, created_at, last_seen FROM users WHERE id=$1`,
+    `SELECT id, full_name, email, role, is_active, created_at, last_seen, avatar_url FROM users WHERE id=$1`,
     [id]
   );
   if (!u.rowCount) return res.status(404).json({ error: 'İstifadəçi tapılmadı.' });
+  const usr = u.rows[0];
 
   // Aqreqat statistika
   const stats = await query(
@@ -92,8 +93,41 @@ router.get('/users/:id/detail', async (req, res) => {
     [id]
   );
 
+  // İstifadəçinin rəyi
+  const review = await query(
+    'SELECT rating, comment, updated_at FROM reviews WHERE user_id=$1',
+    [id]
+  );
+
+  // BÜTÜN HƏRƏKƏTLƏR — vahid fəaliyyət lenti (zaman üzrə)
+  const activity: { type: string; text: string; when: string; meta?: any }[] = [];
+  activity.push({ type: 'register', text: 'Qeydiyyatdan keçdi', when: usr.created_at });
+  if (usr.avatar_url) activity.push({ type: 'avatar', text: 'Profil şəkli yüklədi', when: usr.created_at });
+  uploaded.rows.forEach((t) =>
+    activity.push({
+      type: 'upload',
+      text: `Test yüklədi: "${t.title}" (${t.question_count} sual)`,
+      when: t.created_at,
+    })
+  );
+  exams.rows.forEach((e) =>
+    activity.push({
+      type: 'exam',
+      text: `${e.practice ? 'Məşq' : 'İmtahan'}: "${e.test_title}" — ${e.score}% (${e.grade})`,
+      when: e.submitted_at,
+      meta: { score: e.score, grade: e.grade },
+    })
+  );
+  if (review.rows[0])
+    activity.push({
+      type: 'review',
+      text: `Rəy yazdı: ${review.rows[0].rating}★ ${review.rows[0].comment ? '— "' + review.rows[0].comment + '"' : ''}`,
+      when: review.rows[0].updated_at,
+    });
+  activity.sort((a, b) => new Date(b.when).getTime() - new Date(a.when).getTime());
+
   res.json({
-    user: u.rows[0],
+    user: usr,
     stats: {
       exams_taken: Number(st.exams_taken),
       avg_score: Number(st.avg_score),
@@ -105,6 +139,8 @@ router.get('/users/:id/detail', async (req, res) => {
     latest: exams.rows[0] || null,
     exams: exams.rows,
     uploadedTests: uploaded.rows,
+    review: review.rows[0] || null,
+    activity,
   });
 });
 
