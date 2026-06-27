@@ -51,9 +51,12 @@ export async function authRequired(
   } catch {
     return res.status(401).json({ error: 'Token etibarsızdır və ya vaxtı keçib.' });
   }
-  // Deaktiv edilmiş istifadəçinin girişini DƏRHAL kəs
+  // Deaktiv/silinmiş istifadəçinin girişini DƏRHAL kəs
   if (!(await isActive(req.user.sub))) {
-    return res.status(403).json({ error: 'Hesabınız deaktiv edilib. Admin ilə əlaqə saxlayın.' });
+    return res.status(403).json({
+      error: 'Hesabınıza giriş dayandırılıb. Yenidən qeydiyyatdan keçin və ya admin ilə əlaqə saxlayın.',
+      code: 'ACCOUNT_DISABLED',
+    });
   }
   touchLastSeen(req.user.sub);
   next();

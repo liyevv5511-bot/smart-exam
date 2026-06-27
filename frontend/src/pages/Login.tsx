@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
@@ -12,6 +12,14 @@ export default function Login() {
   const [form, setForm] = useState({ email: '', password: '', remember: true });
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Hesabı silinmiş/deaktiv edilmiş istifadəçi yönləndirilibsə xəbər ver
+  useEffect(() => {
+    if (new URLSearchParams(location.search).get('disabled')) {
+      toast.error('Hesabınıza giriş dayandırılıb. Yenidən qeydiyyatdan keçin.', { duration: 6000 });
+      window.history.replaceState({}, '', '/login');
+    }
+  }, []);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();

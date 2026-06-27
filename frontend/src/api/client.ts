@@ -16,13 +16,26 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// 401 → çıxış
+function clearAuth() {
+  localStorage.removeItem('token');
+  sessionStorage.removeItem('token');
+  localStorage.removeItem('authUser');
+}
+
+// 401 (vaxtı keçmiş token) və 403 ACCOUNT_DISABLED (silinmiş/bloklanmış hesab) → çıxış
 api.interceptors.response.use(
   (r) => r,
   (err) => {
-    if (err.response?.status === 401 && !location.pathname.startsWith('/login')) {
-      localStorage.removeItem('token');
-      sessionStorage.removeItem('token');
+    const status = err.response?.status;
+    const code = err.response?.data?.code;
+    if (status === 403 && code === 'ACCOUNT_DISABLED') {
+      // Hesab silinib/deaktiv edilib → dərhal çıxış və login səhifəsinə yönləndir
+      clearAuth();
+      if (!location.pathname.startsWith('/login')) {
+        location.href = '/login?disabled=1';
+      }
+    } else if (status === 401 && !location.pathname.startsWith('/login')) {
+      clearAuth();
     }
     return Promise.reject(err);
   }

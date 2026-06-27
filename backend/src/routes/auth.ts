@@ -61,7 +61,9 @@ router.post('/login', async (req, res) => {
   const u = rows[0];
   if (!u) return res.status(401).json({ error: 'E-poçt və ya şifrə yanlışdır.' });
   if (!u.is_active) {
-    return res.status(403).json({ error: 'Hesabınız deaktiv edilib. Admin ilə əlaqə saxlayın.' });
+    return res
+      .status(403)
+      .json({ error: 'Hesabınız deaktiv edilib. Admin ilə əlaqə saxlayın.', code: 'ACCOUNT_DISABLED' });
   }
   const ok = await bcrypt.compare(password, u.password_hash);
   if (!ok) return res.status(401).json({ error: 'E-poçt və ya şifrə yanlışdır.' });
