@@ -55,7 +55,7 @@ router.post('/login', async (req, res) => {
 
   const { email, password, remember } = parsed.data;
   const { rows } = await query(
-    'SELECT id, full_name, email, role, password_hash, is_active FROM users WHERE email=$1',
+    'SELECT id, full_name, email, role, avatar_url, password_hash, is_active FROM users WHERE email=$1',
     [email.toLowerCase()]
   );
   const u = rows[0];
@@ -71,7 +71,7 @@ router.post('/login', async (req, res) => {
   const token = signToken({ sub: u.id, role: u.role, email: u.email }, !!remember);
   res.json({
     token,
-    user: { id: u.id, full_name: u.full_name, email: u.email, role: u.role },
+    user: { id: u.id, full_name: u.full_name, email: u.email, role: u.role, avatar_url: u.avatar_url },
   });
 });
 

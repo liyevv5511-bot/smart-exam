@@ -113,6 +113,17 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(user_id);
 
+-- ---------- Sayt rəyləri (hər istifadəçidən bir rəy) ----------
+CREATE TABLE IF NOT EXISTS reviews (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id     UUID NOT NULL UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+  rating      INTEGER NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  comment     TEXT,
+  is_visible  BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 -- ---------- Statistika görünüşü (aqreqasiya) ----------
 CREATE OR REPLACE VIEW user_stats AS
 SELECT

@@ -16,6 +16,7 @@ import { WifiOff, RefreshCw } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useOffline } from '../offline/OfflineContext';
+import { Avatar } from './Avatar';
 import { NotificationBell } from './NotificationBell';
 
 const nav = [
@@ -82,9 +83,7 @@ export function Layout() {
         </nav>
 
         <div className="mt-4 flex items-center gap-2 border-t border-slate-200 pt-4 dark:border-slate-800">
-          <div className="grid h-9 w-9 place-items-center rounded-full bg-brand-100 text-sm font-bold text-brand-700 dark:bg-brand-900 dark:text-brand-200">
-            {user?.full_name?.[0]?.toUpperCase()}
-          </div>
+          <Avatar url={user?.avatar_url} name={user?.full_name} size={36} />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold">{user?.full_name}</p>
             <p className="truncate text-xs text-slate-400">{user?.email}</p>

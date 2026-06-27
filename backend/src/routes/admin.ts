@@ -194,6 +194,31 @@ router.delete('/tests/:id', async (req, res) => {
   res.json({ message: 'Test silindi.' });
 });
 
+// ---------- Bütün rəylər (admin moderasiyası) ----------
+router.get('/reviews', async (_req, res) => {
+  const { rows } = await query(
+    `SELECT r.id, r.rating, r.comment, r.is_visible, r.created_at,
+            u.full_name, u.email
+     FROM reviews r JOIN users u ON u.id = r.user_id
+     ORDER BY r.created_at DESC`
+  );
+  res.json({ reviews: rows });
+});
+
+router.patch('/reviews/:id/visible', async (req, res) => {
+  await query('UPDATE reviews SET is_visible=$1 WHERE id=$2', [
+    !!req.body.isVisible,
+    req.params.id,
+  ]);
+  res.json({ ok: true });
+});
+
+router.delete('/reviews/:id', async (req, res) => {
+  const r = await query('DELETE FROM reviews WHERE id=$1', [req.params.id]);
+  if (!r.rowCount) return res.status(404).json({ error: 'Rəy tapılmadı.' });
+  res.json({ message: 'Rəy silindi.' });
+});
+
 // ---------- Bütün istifadəçilərə bildiriş göndər ----------
 router.post('/broadcast', async (req, res) => {
   const title = String(req.body.title || '').trim();

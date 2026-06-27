@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
   User,
@@ -9,9 +9,13 @@ import {
   Phone,
   Mail,
   MessageCircle,
+  Camera,
+  Star,
 } from 'lucide-react';
 import { api, apiError } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { Avatar } from '../components/Avatar';
+import { fileToResizedDataUrl } from '../utils/image';
 
 // ---- Admin əlaqə məlumatları (dəyişmək üçün buradan redaktə edin) ----
 const ADMIN_PHONE = '060-288-88-40';
@@ -20,14 +24,61 @@ const ADMIN_EMAIL = 'liyevv5511@gmail.com';
 
 export default function Profile() {
   const { user, setUser } = useAuth();
-  const [tab, setTab] = useState<'profile' | 'password' | 'history' | 'support'>('profile');
+  const [tab, setTab] = useState<'profile' | 'password' | 'history' | 'review' | 'support'>('profile');
   const [fullName, setFullName] = useState(user?.full_name || '');
   const [pwd, setPwd] = useState({ currentPassword: '', newPassword: '' });
   const [history, setHistory] = useState<any[]>([]);
+  const avatarInput = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [review, setReview] = useState<{ rating: number; comment: string }>({ rating: 0, comment: '' });
+  const [savingReview, setSavingReview] = useState(false);
 
   useEffect(() => {
     if (tab === 'history') api.get('/profile/history').then((r) => setHistory(r.data.history));
+    if (tab === 'review')
+      api.get('/reviews/me').then((r) => {
+        if (r.data.review) setReview({ rating: r.data.review.rating, comment: r.data.review.comment || '' });
+      });
   }, [tab]);
+
+  // Avatar yüklə (kiçildilib data-URL kimi serverə yazılır)
+  const uploadAvatar = async (file?: File | null) => {
+    if (!file) return;
+    setUploading(true);
+    try {
+      const dataUrl = await fileToResizedDataUrl(file, 256);
+      const { data } = await api.put('/profile', { fullName: user?.full_name, avatarUrl: dataUrl });
+      setUser(data.user);
+      toast.success('Profil şəkli yeniləndi.');
+    } catch (e) {
+      toast.error(apiError(e));
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const removeAvatar = async () => {
+    try {
+      const { data } = await api.put('/profile', { fullName: user?.full_name, avatarUrl: null });
+      setUser(data.user);
+      toast.success('Şəkil silindi.');
+    } catch (e) {
+      toast.error(apiError(e));
+    }
+  };
+
+  const saveReview = async () => {
+    if (!review.rating) return toast.error('Zəhmət olmasa ulduz seçin.');
+    setSavingReview(true);
+    try {
+      await api.post('/reviews', { rating: review.rating, comment: review.comment });
+      toast.success('Rəyiniz üçün təşəkkürlər! 🙏');
+    } catch (e) {
+      toast.error(apiError(e));
+    } finally {
+      setSavingReview(false);
+    }
+  };
 
   const saveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,33 +106,54 @@ export default function Profile() {
     { id: 'profile' as const, icon: User, label: 'Profil' },
     { id: 'password' as const, icon: Lock, label: 'Şifrə' },
     { id: 'history' as const, icon: History, label: 'Tarixçə' },
+    { id: 'review' as const, icon: Star, label: 'Rəy' },
     { id: 'support' as const, icon: LifeBuoy, label: 'Dəstək' },
   ];
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div className="flex items-center gap-4">
-        <div className="grid h-16 w-16 place-items-center rounded-2xl bg-brand-600 text-2xl font-bold text-white">
-          {user?.full_name?.[0]?.toUpperCase()}
+        <div className="relative">
+          <Avatar url={user?.avatar_url} name={user?.full_name} size={72} />
+          <button
+            onClick={() => avatarInput.current?.click()}
+            disabled={uploading}
+            title="Şəkil yüklə"
+            className="absolute -bottom-1 -right-1 grid h-7 w-7 place-items-center rounded-full border-2 border-white bg-brand-600 text-white shadow hover:bg-brand-700 disabled:opacity-50 dark:border-slate-900"
+          >
+            <Camera size={14} />
+          </button>
+          <input
+            ref={avatarInput}
+            type="file"
+            accept="image/*"
+            hidden
+            onChange={(e) => uploadAvatar(e.target.files?.[0])}
+          />
         </div>
         <div>
           <h1 className="text-2xl font-extrabold">{user?.full_name}</h1>
           <p className="text-sm text-slate-400">{user?.email}</p>
+          {user?.avatar_url && (
+            <button onClick={removeAvatar} className="text-xs text-rose-500 hover:underline">
+              Şəkli sil
+            </button>
+          )}
         </div>
       </div>
 
-      <div className="flex gap-2 rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
+      <div className="flex gap-1 overflow-x-auto rounded-xl bg-slate-100 p-1 dark:bg-slate-800">
         {tabs.map((t) => (
           <button
             key={t.id}
             onClick={() => setTab(t.id)}
-            className={`flex flex-1 items-center justify-center gap-2 rounded-lg py-2 text-sm font-medium transition ${
+            className={`flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg px-2 py-2 text-sm font-medium transition ${
               tab === t.id
                 ? 'bg-white text-brand-600 shadow-sm dark:bg-slate-900'
                 : 'text-slate-500'
             }`}
           >
-            <t.icon size={16} /> {t.label}
+            <t.icon size={16} /> <span className="hidden sm:inline">{t.label}</span>
           </button>
         ))}
       </div>
@@ -152,6 +224,56 @@ export default function Profile() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {tab === 'review' && (
+        <div className="card space-y-5">
+          <div>
+            <h2 className="text-lg font-bold">Sayt haqqında rəyiniz</h2>
+            <p className="text-sm text-slate-400">
+              Rəyiniz giriş səhifəsində digər istifadəçilərə göstərilə bilər.
+            </p>
+          </div>
+
+          {/* Ulduzlar */}
+          <div>
+            <label className="label">Qiymətləndirmə</label>
+            <div className="flex gap-1">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setReview((r) => ({ ...r, rating: n }))}
+                  className="transition hover:scale-110"
+                  title={`${n} ulduz`}
+                >
+                  <Star
+                    size={32}
+                    className={
+                      n <= review.rating ? 'fill-amber-400 text-amber-400' : 'text-slate-300 dark:text-slate-600'
+                    }
+                  />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="label">Şərhiniz (istəyə bağlı)</label>
+            <textarea
+              value={review.comment}
+              onChange={(e) => setReview((r) => ({ ...r, comment: e.target.value }))}
+              rows={4}
+              maxLength={1000}
+              className="input resize-none"
+              placeholder="Bu sayt sizə necə kömək etdi? Təcrübənizi bölüşün…"
+            />
+            <p className="mt-1 text-right text-xs text-slate-400">{review.comment.length}/1000</p>
+          </div>
+
+          <button onClick={saveReview} disabled={savingReview} className="btn-primary w-full">
+            <Star size={16} /> {savingReview ? 'Göndərilir…' : 'Rəyi göndər'}
+          </button>
         </div>
       )}
 

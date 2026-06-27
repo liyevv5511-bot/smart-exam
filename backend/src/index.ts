@@ -10,6 +10,7 @@ import statsRoutes from './routes/stats';
 import profileRoutes from './routes/profile';
 import adminRoutes from './routes/admin';
 import notifRoutes from './routes/notifications';
+import reviewRoutes from './routes/reviews';
 
 dotenv.config();
 
@@ -47,6 +48,7 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/profile', profileRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notifRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 // Qlobal xəta tutucusu
 app.use(
