@@ -11,6 +11,7 @@ import profileRoutes from './routes/profile';
 import adminRoutes from './routes/admin';
 import notifRoutes from './routes/notifications';
 import reviewRoutes from './routes/reviews';
+import translateRoutes from './routes/translate';
 
 dotenv.config();
 
@@ -49,6 +50,7 @@ app.use('/api/profile', profileRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notifRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/translate', translateRoutes);
 
 // Qlobal xəta tutucusu
 app.use(

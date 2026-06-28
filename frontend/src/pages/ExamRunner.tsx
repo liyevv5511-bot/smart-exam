@@ -14,6 +14,7 @@ import {
   Flag,
   Lightbulb,
   GraduationCap,
+  Languages,
 } from 'lucide-react';
 import { api, apiError } from '../api/client';
 import { useTheme } from '../context/ThemeContext';
@@ -44,6 +45,12 @@ export default function ExamRunner() {
   const [practice, setPractice] = useState(false);
   const [flagged, setFlagged] = useState<Set<string>>(new Set());
   const [feedback, setFeedback] = useState<Record<string, Feedback>>({});
+  // Tərcümə: orijinal / az / tr
+  const [lang, setLang] = useState<'orig' | 'az' | 'tr'>('orig');
+  const [translations, setTranslations] = useState<
+    Record<string, Record<string, { text: string; options: string[] }>>
+  >({});
+  const [translating, setTranslating] = useState(false);
 
   const dirty = useRef<Set<string>>(new Set());
   const answersRef = useRef<Answers>({});
@@ -197,6 +204,31 @@ export default function ExamRunner() {
     return () => window.removeEventListener('keydown', onKey);
   }, [idx, total, questions, showNav, practice, feedback]);
 
+  // ---- Tərcümə: cari sualı seçilmiş dilə çevir (ehtiyac olduqda) ----
+  useEffect(() => {
+    if (lang === 'orig') return;
+    const cur = questions[idx];
+    if (!cur || translations[cur.id]?.[lang]) return;
+    let cancelled = false;
+    setTranslating(true);
+    const texts = [cur.text, ...cur.options.map((o) => o.text)];
+    api
+      .post('/translate', { target: lang, texts })
+      .then((r) => {
+        if (cancelled) return;
+        const arr: string[] = r.data.translations || [];
+        setTranslations((prev) => ({
+          ...prev,
+          [cur.id]: { ...(prev[cur.id] || {}), [lang]: { text: arr[0], options: arr.slice(1) } },
+        }));
+      })
+      .catch(() => {})
+      .finally(() => !cancelled && setTranslating(false));
+    return () => {
+      cancelled = true;
+    };
+  }, [idx, lang, questions]);
+
   const q = questions[idx];
   if (!q)
     return (
@@ -207,6 +239,9 @@ export default function ExamRunner() {
 
   const answered = Object.keys(answers).length;
   const pct = total ? (answered / total) * 100 : 0;
+  // Cari sualın tərcüməsi (varsa)
+  const trCur = lang !== 'orig' ? translations[q.id]?.[lang] : undefined;
+  const displayText = trCur?.text || q.text;
   const fmt = (s: number) =>
     `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
@@ -303,6 +338,24 @@ export default function ExamRunner() {
                     <GraduationCap size={13} /> Məşq rejimi
                   </span>
                 )}
+                {/* Dil / tərcümə seçici */}
+                <div className="inline-flex items-center gap-1 rounded-full bg-slate-100 p-0.5 dark:bg-slate-800">
+                  <Languages size={13} className="ml-1.5 text-slate-400" />
+                  {(['orig', 'az', 'tr'] as const).map((l) => (
+                    <button
+                      key={l}
+                      onClick={() => setLang(l)}
+                      className={`rounded-full px-2 py-0.5 text-xs font-semibold transition ${
+                        lang === l
+                          ? 'bg-brand-600 text-white'
+                          : 'text-slate-500 hover:text-brand-600'
+                      }`}
+                    >
+                      {l === 'orig' ? 'Orijinal' : l.toUpperCase()}
+                    </button>
+                  ))}
+                  {translating && <span className="px-1 text-xs text-slate-400">…</span>}
+                </div>
               </div>
               <button
                 onClick={() => toggleFlag(q.id)}
@@ -316,7 +369,7 @@ export default function ExamRunner() {
                 <Flag size={13} /> {flagged.has(q.id) ? 'Nişanlı' : 'Nişanla'}
               </button>
             </div>
-            <h2 className="mb-6 text-xl font-bold leading-relaxed">{q.text}</h2>
+            <h2 className="mb-6 text-xl font-bold leading-relaxed">{displayText}</h2>
             <div className="space-y-3">
               {q.options.map((opt) => {
                 const active = answers[q.id] === opt.index;
@@ -349,7 +402,7 @@ export default function ExamRunner() {
                     >
                       {opt.label}
                     </span>
-                    <span className="text-sm">{opt.text}</span>
+                    <span className="text-sm">{trCur?.options[opt.index] ?? opt.text}</span>
                     {isCorrectOpt && <CheckCircle2 size={18} className="ml-auto text-emerald-600" />}
                     {isWrongChosen && <XCircle size={18} className="ml-auto text-rose-500" />}
                     {!fb && active && <CheckCircle2 size={18} className="ml-auto text-brand-600" />}
