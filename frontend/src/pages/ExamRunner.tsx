@@ -327,7 +327,7 @@ export default function ExamRunner() {
             exit={{ opacity: 0, x: -24 }}
             transition={{ duration: 0.2 }}
           >
-            <div className="mb-3 flex items-center justify-between gap-2">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500 dark:bg-slate-800">
                   Seçimlər: {q.optionCount}
@@ -368,7 +368,7 @@ export default function ExamRunner() {
                 <Flag size={13} /> {flagged.has(q.id) ? 'Nişanlı' : 'Nişanla'}
               </button>
             </div>
-            <h2 className="text-xl font-bold leading-relaxed">{q.text}</h2>
+            <h2 className="text-lg font-bold leading-relaxed sm:text-xl">{q.text}</h2>
             {trCur?.text && trCur.text !== q.text ? (
               <p className="mb-6 mt-1 text-base font-medium text-brand-600 dark:text-brand-300">
                 {trCur.text}

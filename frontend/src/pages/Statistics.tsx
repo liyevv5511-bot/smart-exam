@@ -137,10 +137,10 @@ export default function Statistics() {
                 <thead>
                   <tr className="border-b border-slate-200 text-left text-slate-400 dark:border-slate-800">
                     <th className="pb-2 font-medium">Test</th>
-                    <th className="pb-2 font-medium">Rejim</th>
+                    <th className="hidden pb-2 font-medium sm:table-cell">Rejim</th>
                     <th className="pb-2 font-medium">Düz/Səhv</th>
                     <th className="pb-2 font-medium">Bal</th>
-                    <th className="pb-2 font-medium">Tarix</th>
+                    <th className="hidden pb-2 font-medium md:table-cell">Tarix</th>
                     <th className="pb-2 font-medium"></th>
                   </tr>
                 </thead>
@@ -148,13 +148,13 @@ export default function Statistics() {
                   {data.history.map((h: any) => (
                     <tr key={h.id} className="border-b border-slate-100 last:border-0 dark:border-slate-800/60">
                       <td className="py-3 font-medium">{h.test_title}</td>
-                      <td className="py-3 text-slate-500">{h.mode}</td>
+                      <td className="hidden py-3 text-slate-500 sm:table-cell">{h.mode}</td>
                       <td className="py-3">
                         <span className="text-emerald-600">{h.correct_count}</span> /{' '}
                         <span className="text-rose-500">{h.wrong_count}</span>
                       </td>
                       <td className="py-3 font-semibold">{h.score}%</td>
-                      <td className="py-3 text-slate-400">
+                      <td className="hidden py-3 text-slate-400 md:table-cell">
                         {new Date(h.submitted_at).toLocaleDateString('az')}
                       </td>
                       <td className="py-3 text-right">

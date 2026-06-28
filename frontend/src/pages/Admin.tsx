@@ -311,11 +311,11 @@ export default function Admin() {
             <thead>
               <tr className="border-b border-slate-200 text-left text-slate-400 dark:border-slate-800">
                 <th className="pb-2 font-medium">Ad</th>
-                <th className="pb-2 font-medium">Qeydiyyat e-poçtu</th>
-                <th className="pb-2 font-medium">Qeydiyyat tarixi</th>
-                <th className="pb-2 font-medium">Rol</th>
-                <th className="pb-2 font-medium">Yüklədiyi testlər</th>
-                <th className="pb-2 font-medium">İmtahanlar</th>
+                <th className="hidden pb-2 font-medium sm:table-cell">Qeydiyyat e-poçtu</th>
+                <th className="hidden pb-2 font-medium lg:table-cell">Qeydiyyat tarixi</th>
+                <th className="hidden pb-2 font-medium md:table-cell">Rol</th>
+                <th className="hidden pb-2 font-medium lg:table-cell">Yüklədiyi testlər</th>
+                <th className="hidden pb-2 font-medium md:table-cell">İmtahanlar</th>
                 <th className="pb-2 font-medium">Status</th>
                 <th className="pb-2 font-medium">Əməliyyat</th>
               </tr>
@@ -341,21 +341,21 @@ export default function Admin() {
                         {u.full_name}
                       </div>
                     </td>
-                    <td className="py-3 text-slate-500">{u.email}</td>
-                    <td className="py-3 text-slate-400">
+                    <td className="hidden py-3 text-slate-500 sm:table-cell">{u.email}</td>
+                    <td className="hidden py-3 text-slate-400 lg:table-cell">
                       {new Date(u.created_at).toLocaleDateString('az')}
                     </td>
-                    <td className="py-3">
+                    <td className="hidden py-3 md:table-cell">
                       <span className={`rounded-md px-2 py-0.5 text-xs font-semibold ${u.role === 'admin' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-600 dark:bg-slate-800'}`}>
                         {u.role}
                       </span>
                     </td>
-                    <td className="py-3">
+                    <td className="hidden py-3 lg:table-cell">
                       <span className="inline-flex items-center gap-1 font-semibold text-brand-600">
                         <FileSpreadsheet size={14} /> {u.tests_uploaded}
                       </span>
                     </td>
-                    <td className="py-3">{u.exams_taken}</td>
+                    <td className="hidden py-3 md:table-cell">{u.exams_taken}</td>
                     <td className="py-3">
                       <div className="flex flex-wrap items-center gap-1.5">
                         {u.in_exam && (

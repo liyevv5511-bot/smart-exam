@@ -160,11 +160,11 @@ export default function Dashboard() {
               <thead>
                 <tr className="border-b border-slate-200 text-left text-slate-400 dark:border-slate-800">
                   <th className="pb-2 font-medium">Test</th>
-                  <th className="pb-2 font-medium">Rejim</th>
+                  <th className="hidden pb-2 font-medium sm:table-cell">Rejim</th>
                   <th className="pb-2 font-medium">Düz/Səhv</th>
                   <th className="pb-2 font-medium">Bal</th>
                   <th className="pb-2 font-medium">Qiymət</th>
-                  <th className="pb-2 font-medium">Tarix</th>
+                  <th className="hidden pb-2 font-medium md:table-cell">Tarix</th>
                   <th className="pb-2 font-medium"></th>
                 </tr>
               </thead>
@@ -172,14 +172,14 @@ export default function Dashboard() {
                 {data.recentActivity.map((a) => (
                   <tr key={a.id} className="border-b border-slate-100 last:border-0 dark:border-slate-800/60">
                     <td className="py-3 font-medium">{a.test_title}</td>
-                    <td className="py-3 text-slate-500">{a.mode}</td>
+                    <td className="hidden py-3 text-slate-500 sm:table-cell">{a.mode}</td>
                     <td className="py-3">
                       <span className="text-emerald-600">{a.correct_count}</span> /{' '}
                       <span className="text-rose-500">{a.wrong_count}</span>
                     </td>
                     <td className="py-3 font-semibold">{a.score}%</td>
                     <td className={`py-3 font-bold ${gradeColor(a.grade)}`}>{a.grade}</td>
-                    <td className="py-3 text-slate-400">
+                    <td className="hidden py-3 text-slate-400 md:table-cell">
                       {new Date(a.submitted_at).toLocaleDateString('az')}
                     </td>
                     <td className="py-3 text-right">
