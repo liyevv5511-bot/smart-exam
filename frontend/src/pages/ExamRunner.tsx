@@ -239,9 +239,8 @@ export default function ExamRunner() {
 
   const answered = Object.keys(answers).length;
   const pct = total ? (answered / total) * 100 : 0;
-  // Cari sualın tərcüməsi (varsa)
+  // Cari sualın tərcüməsi (varsa) — orijinalla yanaşı göstərilir
   const trCur = lang !== 'orig' ? translations[q.id]?.[lang] : undefined;
-  const displayText = trCur?.text || q.text;
   const fmt = (s: number) =>
     `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
@@ -369,7 +368,14 @@ export default function ExamRunner() {
                 <Flag size={13} /> {flagged.has(q.id) ? 'Nişanlı' : 'Nişanla'}
               </button>
             </div>
-            <h2 className="mb-6 text-xl font-bold leading-relaxed">{displayText}</h2>
+            <h2 className="text-xl font-bold leading-relaxed">{q.text}</h2>
+            {trCur?.text && trCur.text !== q.text ? (
+              <p className="mb-6 mt-1 text-base font-medium text-brand-600 dark:text-brand-300">
+                {trCur.text}
+              </p>
+            ) : (
+              <div className="mb-6" />
+            )}
             <div className="space-y-3">
               {q.options.map((opt) => {
                 const active = answers[q.id] === opt.index;
@@ -402,7 +408,14 @@ export default function ExamRunner() {
                     >
                       {opt.label}
                     </span>
-                    <span className="text-sm">{trCur?.options[opt.index] ?? opt.text}</span>
+                    <span className="text-sm">
+                      {opt.text}
+                      {trCur?.options[opt.index] && trCur.options[opt.index] !== opt.text && (
+                        <span className="mt-0.5 block text-xs font-normal text-brand-600 dark:text-brand-300">
+                          {trCur.options[opt.index]}
+                        </span>
+                      )}
+                    </span>
                     {isCorrectOpt && <CheckCircle2 size={18} className="ml-auto text-emerald-600" />}
                     {isWrongChosen && <XCircle size={18} className="ml-auto text-rose-500" />}
                     {!fb && active && <CheckCircle2 size={18} className="ml-auto text-brand-600" />}
